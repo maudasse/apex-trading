@@ -38,7 +38,10 @@ export const deleteSymbolRule = (symbol) =>
 // ── WebSocket ─────────────────────────────────────────────────────────────
 export function createWebSocket(onMessage) {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const ws = new WebSocket(`${protocol}//localhost:3001`);
+  const wsUrl = process.env.REACT_APP_API_URL 
+  ? process.env.REACT_APP_API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+  : `${protocol}//localhost:3001`;
+const ws = new WebSocket(wsUrl);
   ws.onmessage = (e) => {
     try { onMessage(JSON.parse(e.data)); } catch {}
   };
