@@ -46,11 +46,10 @@ app.use('/api/rules', rulesRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/copytrading', copyTradingRouter);
 
-// Serve React frontend
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../../frontend/build')));
+app.use(express.static(path.join(__dirname, '../../../frontend/build')));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frontend/build', 'index.html'));
+  res.sendFile(path.join(__dirname, '../../../frontend/build', 'index.html'));
 });
 
 // ── Boot ───────────────────────────────────────────────────────────────────
