@@ -1,0 +1,14 @@
+{
+  "global": {
+    "enabled": true,
+    "stopLossPips": 1,
+    "takeProfitPips": 1,
+    "riskRewardRatio": 2,
+    "mode": "pips",
+    "trailingStop": false,
+    "trailingStopPips": 30,
+    "breakeven": false,
+    "breakevenTriggerPips": 30
+  },
+  "symbols": {}
+}

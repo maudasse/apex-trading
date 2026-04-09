@@ -1,0 +1,13 @@
+{
+  "name": "apex-trading-automation",
+  "version": "1.0.0",
+  "description": "MT4/MT5 Auto SL/TP Trading Bot — MacBook compatible via MetaApi",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start"
+  }
+}

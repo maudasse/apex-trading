@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "masterAccountKey": "mt5",
+  "copySlTp": true,
+  "copiedTrades": {},
+  "followers": [
+    {
+      "accountKey": "mt5_2",
+      "lotSize": 0.2,
+      "enabled": true
+    },
+    {
+      "accountKey": "mt5_3",
+      "lotSize": 0.1,
+      "enabled": true
+    }
+  ]
+}
