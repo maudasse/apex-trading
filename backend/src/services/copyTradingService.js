@@ -120,9 +120,9 @@ class CopyTradingService {
         for (const follower of activeFollowers) {
           // Skip if already copied to this follower
           if (alreadyCopied?.[follower.accountKey]) continue;
-          if (!this.lastMasterPositions[id]) {
-            await this.copyTrade(position, follower, config);
-          }
+          if (!this.lastMasterPositions[id] && !alreadyCopied?.[follower.accountKey]) {
+  await this.copyTrade(position, follower, config);
+}
         }
       }
 
