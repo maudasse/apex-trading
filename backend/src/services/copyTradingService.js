@@ -116,6 +116,9 @@ class CopyTradingService {
 
       // ── Detect NEW trades ────────────────────────────────────────────────
       for (const [id, position] of Object.entries(masterMap)) {
+for (const [id, position] of Object.entries(masterMap)) {
+  if (position.comment?.startsWith('Copy of')) continue;
+  const alreadyCopied = config.copiedTrades[id];
         const alreadyCopied = config.copiedTrades[id];
         for (const follower of activeFollowers) {
           // Skip if already copied to this follower
