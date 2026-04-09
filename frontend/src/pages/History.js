@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 async function fetchAccounts() {
-  const res = await fetch('/api/accounts');
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/accounts');
   const json = await res.json();
   return json.success ? json.data : [];
 }
