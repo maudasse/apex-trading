@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
 async function fetchCopyTrading() {
-  const res = await fetch('/api/copytrading');
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/copytrading');
   const json = await res.json();
   return json.data;
 }
 
 async function fetchAccounts() {
-  const res = await fetch('/api/copytrading/accounts');
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/copytrading/accounts');
   const json = await res.json();
   return json.data;
 }
 
 async function updateConfig(updates) {
-  const res = await fetch('/api/copytrading/config', {
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/copytrading/config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
@@ -23,7 +23,7 @@ async function updateConfig(updates) {
 }
 
 async function toggleCopyTrading(enabled) {
-  const res = await fetch('/api/copytrading/toggle', {
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/copytrading/toggle', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled }),
