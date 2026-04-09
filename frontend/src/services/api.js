@@ -1,6 +1,4 @@
-const BASE = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api`
-  : '/api';
+const BASE = 'https://apex-trading-production-43d0.up.railway.app/api';
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -40,9 +38,7 @@ export const deleteSymbolRule = (symbol) =>
 // ── WebSocket ─────────────────────────────────────────────────────────────
 export function createWebSocket(onMessage) {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = process.env.REACT_APP_API_URL 
-  ? process.env.REACT_APP_API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
-  : `${protocol}//localhost:3001`;
+  const wsUrl = 'wss://apex-trading-production-43d0.up.railway.app';
 const ws = new WebSocket(wsUrl);
   ws.onmessage = (e) => {
     try { onMessage(JSON.parse(e.data)); } catch {}
