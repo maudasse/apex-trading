@@ -28,9 +28,7 @@ class MetaApiService {
 
   async initialize() {
     if (!process.env.META_API_TOKEN) throw new Error('META_API_TOKEN is not set in .env');
-    this.api = new MetaApi(process.env.META_API_TOKEN, {
-  region: 'london'
-});
+    this.api = new MetaApi(process.env.META_API_TOKEN);
     const accountDefs = parseAccountsFromEnv();
     if (accountDefs.length === 0) throw new Error('No valid account IDs found in .env.');
     console.log(`[MetaApi] Found ${accountDefs.length} account(s) in .env`);
