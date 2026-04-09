@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { getAccountInfo, getBotStats } from '../services/api';
 
 async function fetchAllAccounts() {
-  const res = await fetch('/api/accounts');
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/accounts');
   const json = await res.json();
   return json.success ? json.data : [];
 }
 
 async function deployAll() {
-  const res = await fetch('/api/accounts/deploy-all', { method: 'POST' });
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/accounts/deploy-all', { method: 'POST' });
   return res.json();
 }
 
 async function undeployAll() {
-  const res = await fetch('/api/accounts/undeploy-all', { method: 'POST' });
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/accounts/undeploy-all', { method: 'POST' });
   return res.json();
 }
 
