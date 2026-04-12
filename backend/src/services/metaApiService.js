@@ -42,10 +42,6 @@ class MetaApiService {
     try {
       console.log(`[MetaApi] Connecting "${label}" (${key})...`);
       const account = await this.api.metatraderAccountApi.getAccount(id);
-      if (account.state !== 'DEPLOYED') {
-        console.log(`[MetaApi] Deploying "${label}"...`);
-        await account.deploy();
-      }
       await account.waitConnected();
       const connection = account.getRPCConnection();
       await connection.connect();
