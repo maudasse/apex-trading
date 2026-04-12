@@ -21,6 +21,9 @@ class CopyTradingService {
   constructor() {
     this.running = false;
     this.intervalHandle = null;
+    // Tracks copies currently in-flight so a slow tick doesn't duplicate them.
+    // Key format: "followerAccountKey:masterPositionId"
+    this.pendingCopies = new Set();
     this.stats = { totalCopied: 0, totalClosed: 0, errors: [], lastRun: null };
   }
 
@@ -42,6 +45,7 @@ class CopyTradingService {
   stop() {
     this.running = false;
     if (this.intervalHandle) clearInterval(this.intervalHandle);
+    this.pendingCopies.clear();
     console.log('[CopyTrading] Stopped');
   }
 
@@ -63,27 +67,38 @@ class CopyTradingService {
       // Get master positions
       const masterPositions = await metaApiService.getPositions(config.masterAccountKey);
 
-      // Filter out any positions that are themselves copies
+      // Exclude any positions that are themselves copies (safety net)
       const realMasterPositions = masterPositions.filter(p =>
         !p.comment?.startsWith('Copy of')
       );
 
-      // Build a map of master positions by symbol+type for easy lookup
+      // Map master positions by their ID for O(1) lookup
       const masterMap = {};
       for (const p of realMasterPositions) {
         masterMap[p.id] = p;
       }
 
-      // For each follower, compare their positions to master
+      // Sync each active follower against the master
       for (const follower of activeFollowers) {
         try {
           const followerConn = metaApiService.getConnection(follower.accountKey);
-          if (!followerConn) continue;
+          if (!followerConn) {
+            console.warn(`[CopyTrading] Follower ${follower.accountKey} not connected — skipping`);
+            continue;
+          }
+
+          // Validate lotSize up front so we never send undefined/0 to the broker
+          const lotSize = follower.lotSize ?? follower.volume ?? 0;
+          if (!lotSize || lotSize <= 0) {
+            console.warn(`[CopyTrading] Follower ${follower.accountKey} has no lotSize — skipping`);
+            continue;
+          }
 
           // Get follower's current positions
           const followerPositions = await metaApiService.getPositions(follower.accountKey);
 
-          // Build map of what the follower has, keyed by the master position ID in the comment
+          // Build a map of copies the follower already has, keyed by master position ID
+          // extracted from the comment "Copy of <masterPositionId>"
           const followerCopyMap = {}; // masterPositionId -> follower position
           for (const fp of followerPositions) {
             const match = fp.comment?.match(/^Copy of (\S+)/);
@@ -92,13 +107,23 @@ class CopyTradingService {
             }
           }
 
-          // 1. Open missing trades (master has it, follower doesn't)
+          // 1. Open trades the master has but the follower doesn't
           for (const [masterId, masterPos] of Object.entries(masterMap)) {
             if (followerCopyMap[masterId]) continue; // already copied
-            await this.copyTrade(masterPos, follower, config);
+
+            // Guard against duplicate copies while a previous order is still in-flight
+            const pendingKey = `${follower.accountKey}:${masterId}`;
+            if (this.pendingCopies.has(pendingKey)) continue;
+
+            this.pendingCopies.add(pendingKey);
+            try {
+              await this.copyTrade(masterPos, follower, config, lotSize);
+            } finally {
+              this.pendingCopies.delete(pendingKey);
+            }
           }
 
-          // 2. Close extra trades (follower has a copy but master closed it)
+          // 2. Close trades the follower copied but the master has since closed
           for (const [masterId, followerPos] of Object.entries(followerCopyMap)) {
             if (masterMap[masterId]) continue; // master still has it
             await this.closeTrade(followerPos.id, follower.accountKey);
@@ -109,7 +134,10 @@ class CopyTradingService {
             for (const [masterId, masterPos] of Object.entries(masterMap)) {
               const followerPos = followerCopyMap[masterId];
               if (!followerPos) continue;
-              if (masterPos.stopLoss !== followerPos.stopLoss || masterPos.takeProfit !== followerPos.takeProfit) {
+              if (
+                masterPos.stopLoss !== followerPos.stopLoss ||
+                masterPos.takeProfit !== followerPos.takeProfit
+              ) {
                 await this.syncSlTp(masterPos, followerPos.id, follower.accountKey);
               }
             }
@@ -133,24 +161,28 @@ class CopyTradingService {
     }
   }
 
-  async copyTrade(masterPosition, follower, config) {
+  async copyTrade(masterPosition, follower, config, lotSize) {
     try {
       const conn = metaApiService.getConnection(follower.accountKey);
       if (!conn) throw new Error(`Follower ${follower.accountKey} not connected`);
 
       const isBuy = masterPosition.type === 'POSITION_TYPE_BUY';
       const comment = `Copy of ${masterPosition.id}`;
+      const sl = config.copySlTp && masterPosition.stopLoss ? masterPosition.stopLoss : undefined;
+      const tp = config.copySlTp && masterPosition.takeProfit ? masterPosition.takeProfit : undefined;
 
-      const result = await conn.createMarketBuyOrder(
-        masterPosition.symbol,
-        follower.lotSize,
-        config.copySlTp && masterPosition.stopLoss ? masterPosition.stopLoss : undefined,
-        config.copySlTp && masterPosition.takeProfit ? masterPosition.takeProfit : undefined,
-        { comment }
+      // FIX: use the correct order direction — previously always called createMarketBuyOrder
+      const result = isBuy
+        ? await conn.createMarketBuyOrder(masterPosition.symbol, lotSize, sl, tp, { comment })
+        : await conn.createMarketSellOrder(masterPosition.symbol, lotSize, sl, tp, { comment });
+
+      // Log the comment that actually landed on the broker so we can catch truncation issues
+      console.log(
+        `[CopyTrading] ✓ Copied ${masterPosition.symbol} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey}` +
+        ` (${lotSize} lots) | result comment: "${result?.comment ?? 'MISSING — broker may have dropped it'}"`
       );
 
       this.stats.totalCopied++;
-      console.log(`[CopyTrading] ✓ Copied ${masterPosition.symbol} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey} (${follower.lotSize} lots)`);
 
       if (global.broadcast) {
         global.broadcast({
@@ -158,7 +190,7 @@ class CopyTradingService {
           data: {
             symbol: masterPosition.symbol,
             type: isBuy ? 'BUY' : 'SELL',
-            volume: follower.lotSize,
+            volume: lotSize,
             followerAccount: follower.accountKey,
             timestamp: new Date().toISOString(),
           },
