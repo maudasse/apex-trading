@@ -2,6 +2,7 @@ const metaApiService = require('./metaApiService');
 const rulesStore = require('./rulesStore');
 
 const processedPositions = new Map();
+const failedPositions = new Set(); // positions that returned "not found" — stop retrying them
 const POLL_INTERVAL_MS = 1000; // 1 second — near instant!
 
 class BotService {
@@ -32,11 +33,20 @@ class BotService {
     try {
       const positions = await metaApiService.getAllPositions();
       if (global.broadcast) global.broadcast({ type: 'POSITIONS_UPDATE', data: positions });
-      for (const position of positions) await this.processPosition(position, rules);
+
       const activeIds = new Set(positions.map(p => p.id));
+
+      // Clean up closed positions from both maps so we stop tracking them
       for (const id of processedPositions.keys()) {
         if (!activeIds.has(id)) processedPositions.delete(id);
       }
+      // Also clear from failedPositions if they've since disappeared (already closed)
+      for (const id of failedPositions) {
+        if (!activeIds.has(id)) failedPositions.delete(id);
+      }
+
+      for (const position of positions) await this.processPosition(position, rules);
+
     } catch (err) {
       console.error('[Bot] Tick error:', err.message);
       this.stats.errors.push({ time: new Date().toISOString(), message: err.message });
@@ -45,6 +55,9 @@ class BotService {
   }
 
   async processPosition(position, rules) {
+    // Skip positions that previously returned "not found" — they're closed on the broker
+    if (failedPositions.has(position.id)) return;
+
     const rule = rulesStore.getRuleForSymbol(position.symbol);
     if (!rule.enabled) return;
 
@@ -147,12 +160,29 @@ class BotService {
       if (global.broadcast) {
         global.broadcast({
           type: 'POSITION_MODIFIED',
-          data: { positionId: position.id, symbol: position.symbol, platform: position.platform, sl, tp, timestamp: new Date().toISOString() },
+          data: {
+            positionId: position.id,
+            symbol: position.symbol,
+            platform: position.platform,
+            sl,
+            tp,
+            timestamp: new Date().toISOString(),
+          },
         });
       }
       console.log(`[Bot] ⚡ ${position.symbol} (${position.accountKey}) → SL: ${sl}, TP: ${tp}`);
     } catch (err) {
-      console.error(`[Bot] Failed to modify ${position.id}:`, err.message);
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('position not found')) {
+        // Position is closed on the broker — blacklist it so we never retry
+        failedPositions.add(position.id);
+        processedPositions.delete(position.id);
+        console.warn(`[Bot] Position ${position.id} not found on broker — removing from tracking`);
+      } else {
+        console.error(`[Bot] Failed to modify ${position.id}:`, msg);
+        this.stats.errors.push({ time: new Date().toISOString(), message: msg });
+        if (this.stats.errors.length > 50) this.stats.errors.shift();
+      }
     }
   }
 
