@@ -15,6 +15,27 @@ const NAV = [
   { id: 'history', label: 'History', icon: '◷' },
 ];
 
+function DiamondLogo() {
+  return (
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Diamond outline */}
+      <polygon
+        points="19,34 4,16 19,4 34,16"
+        stroke="var(--accent)"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      {/* Sparkle — vertical */}
+      <line x1="19" y1="1" x2="19" y2="8" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round"/>
+      {/* Sparkle — horizontal */}
+      <line x1="16" y1="4" x2="22" y2="4" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round"/>
+      {/* Sparkle glow dot */}
+      <circle cx="19" cy="4" r="1" fill="var(--accent)" opacity="0.9"/>
+    </svg>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState('dashboard');
   const [positions, setPositions] = useState([]);
@@ -62,9 +83,11 @@ export default function App() {
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="sidebar-logo">
-          <span className="logo-mark">⬡</span>
+          <span className="logo-mark">
+            <DiamondLogo />
+          </span>
           <div>
-            <div className="logo-title">APEX</div>
+            <div className="logo-title">MAUDE</div>
             <div className="logo-sub">Trading Automation</div>
           </div>
         </div>
