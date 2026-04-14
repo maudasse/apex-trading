@@ -15,26 +15,7 @@ const NAV = [
   { id: 'history', label: 'History', icon: '◷' },
 ];
 
-function DiamondLogo() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Diamond outline — shifted right to give sparkle room on left */}
-      <polygon
-        points="22,34 7,16 22,4 37,16"
-        stroke="var(--accent)"
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinejoin="round"
-      />
-      {/* Sparkle — vertical, positioned top-left of diamond */}
-      <line x1="9" y1="1" x2="9" y2="8" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round"/>
-      {/* Sparkle — horizontal */}
-      <line x1="6" y1="4" x2="12" y2="4" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round"/>
-      {/* Sparkle glow dot */}
-      <circle cx="9" cy="4" r="1" fill="var(--accent)" opacity="0.9"/>
-    </svg>
-  );
-}
+
 
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -83,9 +64,7 @@ export default function App() {
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="sidebar-logo">
-          <span className="logo-mark">
-            <DiamondLogo />
-          </span>
+          <span className="logo-mark">⬡</span>
           <div>
             <div className="logo-title">MAUDE</div>
             <div className="logo-sub">Trading Automation</div>
