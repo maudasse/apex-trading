@@ -22,7 +22,7 @@ async function restartServices() {
   return res.json();
 }
 
-
+function AccountCard({ accountKey, platform, label }) {
   const [info, setInfo] = useState(null);
   const [error, setError] = useState(null);
 
