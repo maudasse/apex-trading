@@ -15,6 +15,29 @@ const NAV = [
   { id: 'history', label: 'History', icon: '◷' },
 ];
 
+function CrosshairLogo() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Outer circle */}
+      <circle cx="16" cy="16" r="13" stroke="var(--accent)" strokeWidth="1.8"/>
+      {/* Inner circle */}
+      <circle cx="16" cy="16" r="7" stroke="var(--accent)" strokeWidth="1.5"/>
+      {/* Center ring — red */}
+      <circle cx="16" cy="16" r="4" stroke="var(--red)" strokeWidth="1.2"/>
+      {/* Center dot — red */}
+      <circle cx="16" cy="16" r="2" fill="var(--red)"/>
+      {/* Crosshair — top */}
+      <line x1="16" y1="1" x2="16" y2="7" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+      {/* Crosshair — bottom */}
+      <line x1="16" y1="25" x2="16" y2="31" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+      {/* Crosshair — left */}
+      <line x1="1" y1="16" x2="7" y2="16" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+      {/* Crosshair — right */}
+      <line x1="25" y1="16" x2="31" y2="16" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 
 
 export default function App() {
@@ -64,7 +87,9 @@ export default function App() {
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="sidebar-logo">
-          <span className="logo-mark">⬡</span>
+          <span className="logo-mark">
+            <CrosshairLogo />
+          </span>
           <div>
             <div className="logo-title">MAUDE</div>
             <div className="logo-sub">Trading Automation</div>
