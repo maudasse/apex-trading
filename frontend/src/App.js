@@ -8,12 +8,29 @@ import { createWebSocket } from './services/api';
 import './App.css';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: '⬡' },
-  { id: 'positions', label: 'Positions', icon: '◈' },
-  { id: 'rules', label: 'SL/TP Rules', icon: '◎' },
-  { id: 'copytrading', label: 'Copy Trading', icon: '⇄' },
-  { id: 'history', label: 'History', icon: '◷' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'positions', label: 'Positions' },
+  { id: 'rules', label: 'SL/TP Rules' },
+  { id: 'copytrading', label: 'Copy Trading' },
+  { id: 'history', label: 'History' },
 ];
+
+function MiniCrosshair({ active }) {
+  const color = active ? 'var(--accent)' : 'var(--text3)';
+  const red = active ? 'var(--red)' : 'var(--text3)';
+  return (
+    <svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="13" stroke={color} strokeWidth="2.5"/>
+      <circle cx="16" cy="16" r="7" stroke={color} strokeWidth="2"/>
+      <circle cx="16" cy="16" r="4" stroke={red} strokeWidth="2"/>
+      <circle cx="16" cy="16" r="2" fill={red}/>
+      <line x1="16" y1="1" x2="16" y2="7" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="16" y1="25" x2="16" y2="31" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="1" y1="16" x2="7" y2="16" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="25" y1="16" x2="31" y2="16" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
 
 function CrosshairLogo() {
   return (
@@ -102,13 +119,13 @@ export default function App() {
         </div>
 
         <ul className="nav-list">
-          {NAV.map(({ id, label, icon }) => (
+          {NAV.map(({ id, label }) => (
             <li key={id}>
               <button
                 className={`nav-item ${page === id ? 'active' : ''}`}
                 onClick={() => setPage(id)}
               >
-                <span className="nav-icon">{icon}</span>
+                <span className="nav-icon"><MiniCrosshair active={page === id} /></span>
                 {label}
               </button>
             </li>
