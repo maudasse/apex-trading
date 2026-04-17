@@ -17,7 +17,12 @@ async function undeployAll() {
   return res.json();
 }
 
-function AccountCard({ accountKey, platform, label }) {
+async function restartServices() {
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/restart', { method: 'POST' });
+  return res.json();
+}
+
+
   const [info, setInfo] = useState(null);
   const [error, setError] = useState(null);
 
@@ -72,6 +77,7 @@ export default function Dashboard({ positions }) {
   const [botStats, setBotStats] = useState(null);
   const [deploying, setDeploying] = useState(false);
   const [undeploying, setUndeploying] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
 
   useEffect(() => {
@@ -83,6 +89,20 @@ export default function Dashboard({ positions }) {
     const interval = setInterval(() => getBotStats().then(setBotStats).catch(() => {}), 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleRestart = async () => {
+    setRestarting(true);
+    setActionMsg(null);
+    try {
+      await restartServices();
+      setActionMsg({ text: 'Services restarted ✓ — reconnecting to accounts', type: 'success' });
+    } catch (e) {
+      setActionMsg({ text: 'Failed to restart: ' + e.message, type: 'error' });
+    } finally {
+      setRestarting(false);
+      setTimeout(() => setActionMsg(null), 4000);
+    }
+  };
 
   const handleDeployAll = async () => {
     setDeploying(true);
@@ -150,6 +170,14 @@ export default function Dashboard({ positions }) {
             style={{ fontSize: 12 }}
           >
             {undeploying ? 'Stopping...' : '■ Undeploy All'}
+          </button>
+          <button
+            className="btn"
+            onClick={handleRestart}
+            disabled={restarting}
+            style={{ fontSize: 12, borderColor: 'var(--accent2)', color: 'var(--accent2)' }}
+          >
+            {restarting ? 'Restarting...' : '↺ Restart Services'}
           </button>
         </div>
       </div>

@@ -46,6 +46,23 @@ app.use('/api/rules', rulesRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/copytrading', copyTradingRouter);
 
+// ── Restart Services ───────────────────────────────────────────────────────
+app.post('/api/restart', async (req, res) => {
+  console.log('[Restart] Restarting all services...');
+  try {
+    botService.stop();
+    copyTradingService.stop();
+    await metaApiService.initialize();
+    await botService.start();
+    copyTradingService.start();
+    console.log('[Restart] All services restarted ✓');
+    res.json({ success: true, message: 'Services restarted successfully' });
+  } catch (err) {
+    console.error('[Restart] Failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
