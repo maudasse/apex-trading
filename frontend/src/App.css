@@ -442,7 +442,7 @@ tr:hover td { background: var(--bg3); }
   color: var(--text3);
 }
 
-.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-icon { display: flex; justify-content: center; margin-bottom: 12px; opacity: 1; }
 .empty-text { font-size: 13px; }
 
 /* Section spacing */

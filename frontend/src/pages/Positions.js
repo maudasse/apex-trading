@@ -129,7 +129,18 @@ export default function Positions({ positions }) {
 
       {filtered.length === 0 ? (
         <div className="empty">
-          <div className="empty-icon">◈</div>
+          <div className="empty-icon">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.4 }}>
+              <circle cx="16" cy="16" r="13" stroke="var(--accent)" strokeWidth="1.8"/>
+              <circle cx="16" cy="16" r="7" stroke="var(--accent)" strokeWidth="1.5"/>
+              <circle cx="16" cy="16" r="4" stroke="var(--red)" strokeWidth="1.2"/>
+              <circle cx="16" cy="16" r="2" fill="var(--red)"/>
+              <line x1="16" y1="1" x2="16" y2="7" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+              <line x1="16" y1="25" x2="16" y2="31" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+              <line x1="1" y1="16" x2="7" y2="16" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+              <line x1="25" y1="16" x2="31" y2="16" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </div>
           <div className="empty-text">No positions to display</div>
         </div>
       ) : (
