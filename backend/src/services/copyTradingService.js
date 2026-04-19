@@ -3,18 +3,81 @@ const path = require('path');
 const metaApiService = require('./metaApiService');
 
 const CONFIG_FILE = path.join(__dirname, '../../data/copyConfig.json');
+const DEFAULT_CONFIG = { enabled: false, masterAccountKey: null, followers: [], copySlTp: true };
 
 function loadConfig() {
+  // 1. Try the local file first (fastest, used during normal operation)
   try {
-    if (fs.existsSync(CONFIG_FILE)) return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    if (fs.existsSync(CONFIG_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      if (parsed && parsed.followers) return parsed;
+    }
   } catch (e) {}
-  return { enabled: false, masterAccountKey: null, followers: [], copySlTp: true };
+
+  // 2. Fall back to env variable (survives Railway restarts)
+  try {
+    if (process.env.COPY_TRADING_CONFIG) {
+      const parsed = JSON.parse(process.env.COPY_TRADING_CONFIG);
+      if (parsed && parsed.followers) {
+        // Restore the file so subsequent reads are fast
+        saveConfigToFile(parsed);
+        console.log('[CopyTrading] Config restored from environment variable');
+        return parsed;
+      }
+    }
+  } catch (e) {}
+
+  return DEFAULT_CONFIG;
 }
 
-function saveConfig(config) {
-  const dir = path.dirname(CONFIG_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+function saveConfigToFile(config) {
+  try {
+    const dir = path.dirname(CONFIG_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  } catch (e) {
+    console.error('[CopyTrading] Failed to write config file:', e.message);
+  }
+}
+
+async function saveConfig(config) {
+  // Always save to file
+  saveConfigToFile(config);
+
+  // Also persist to Railway env variable via Railway API so it survives restarts
+  try {
+    const projectId = process.env.RAILWAY_PROJECT_ID;
+    const serviceId = process.env.RAILWAY_SERVICE_ID;
+    const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
+    const apiToken = process.env.RAILWAY_API_TOKEN;
+
+    if (projectId && serviceId && environmentId && apiToken) {
+      const configStr = JSON.stringify(config);
+      const query = `
+        mutation {
+          variableUpsert(input: {
+            projectId: "${projectId}",
+            serviceId: "${serviceId}",
+            environmentId: "${environmentId}",
+            name: "COPY_TRADING_CONFIG",
+            value: ${JSON.stringify(configStr)}
+          })
+        }
+      `;
+      await fetch('https://backboard.railway.app/graphql/v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({ query }),
+      });
+      console.log('[CopyTrading] Config saved to Railway env variable');
+    }
+  } catch (e) {
+    // Non-fatal — file is still saved, just won't survive a full restart
+    console.warn('[CopyTrading] Could not save to Railway env variable:', e.message);
+  }
 }
 
 class CopyTradingService {
@@ -233,10 +296,10 @@ class CopyTradingService {
     return loadConfig();
   }
 
-  updateConfig(updates) {
+  async updateConfig(updates) {
     const config = loadConfig();
     const newConfig = { ...config, ...updates };
-    saveConfig(newConfig);
+    await saveConfig(newConfig);
     if (updates.enabled !== undefined || updates.masterAccountKey || updates.followers) {
       this.restart();
     }
