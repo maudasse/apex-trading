@@ -22,6 +22,11 @@ async function restartServices() {
   return res.json();
 }
 
+async function restartRailway() {
+  const res = await fetch('https://apex-trading-production-43d0.up.railway.app/api/railway-restart', { method: 'POST' });
+  return res.json();
+}
+
 function AccountCard({ accountKey, platform, label }) {
   const [info, setInfo] = useState(null);
   const [error, setError] = useState(null);
@@ -78,6 +83,7 @@ export default function Dashboard({ positions }) {
   const [deploying, setDeploying] = useState(false);
   const [undeploying, setUndeploying] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [railwayRestarting, setRailwayRestarting] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
 
   useEffect(() => {
@@ -95,12 +101,26 @@ export default function Dashboard({ positions }) {
     setActionMsg(null);
     try {
       await restartServices();
-      setActionMsg({ text: 'Services restarted ✓ — reconnecting to accounts', type: 'success' });
+      setActionMsg({ text: 'Bots restarted ✓ — reconnecting to accounts', type: 'success' });
     } catch (e) {
       setActionMsg({ text: 'Failed to restart: ' + e.message, type: 'error' });
     } finally {
       setRestarting(false);
       setTimeout(() => setActionMsg(null), 4000);
+    }
+  };
+
+  const handleRailwayRestart = async () => {
+    setRailwayRestarting(true);
+    setActionMsg(null);
+    try {
+      await restartRailway();
+      setActionMsg({ text: 'Railway restart triggered ✓ — server will restart in ~30s', type: 'success' });
+    } catch (e) {
+      setActionMsg({ text: 'Failed to restart Railway: ' + e.message, type: 'error' });
+    } finally {
+      setRailwayRestarting(false);
+      setTimeout(() => setActionMsg(null), 6000);
     }
   };
 
@@ -177,7 +197,15 @@ export default function Dashboard({ positions }) {
             disabled={restarting}
             style={{ fontSize: 12, borderColor: 'var(--accent2)', color: 'var(--accent2)' }}
           >
-            {restarting ? 'Restarting...' : '↺ Restart Services'}
+            {restarting ? 'Restarting...' : '↺ Restart Bots'}
+          </button>
+          <button
+            className="btn"
+            onClick={handleRailwayRestart}
+            disabled={railwayRestarting}
+            style={{ fontSize: 12, borderColor: 'var(--yellow)', color: 'var(--yellow)' }}
+          >
+            {railwayRestarting ? 'Restarting...' : '⚡ Restart Railway'}
           </button>
         </div>
       </div>
