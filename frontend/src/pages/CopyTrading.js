@@ -55,7 +55,16 @@ export default function CopyTrading() {
   const save = async () => {
     setSaving(true);
     try {
-      await updateConfig(localConfig);
+      const cleanConfig = {
+        ...localConfig,
+        followers: localConfig.followers.map(f => ({
+          ...f,
+          symbolMap: Object.fromEntries(
+            Object.entries(f.symbolMap || {}).filter(([k, v]) => k.trim() && v.trim())
+          ),
+        })),
+      };
+      await updateConfig(cleanConfig);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       load();
