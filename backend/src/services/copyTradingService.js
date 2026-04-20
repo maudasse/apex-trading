@@ -231,29 +231,25 @@ class CopyTradingService {
 
       const isBuy = masterPosition.type === 'POSITION_TYPE_BUY';
 
-      // Global symbol map — maps master symbol to broker-specific symbol
-      // Priority: follower.symbolMap (per-follower) > SYMBOL_MAP (global)
-      const SYMBOL_MAP = {
-        // Add new broker symbol mappings here as needed
-        // Format: "masterSymbol": "brokerSymbol"
-      };
+      // FIX: use explicit string check so empty string values don't fall through
+      // follower.symbolMap = { "US500.c": "US500.raw" }
+      const mappedSymbol = follower.symbolMap?.[masterPosition.symbol];
+      const symbol = (mappedSymbol && mappedSymbol.trim())
+        ? mappedSymbol.trim()
+        : masterPosition.symbol;
 
-      // Translate symbol if follower has a symbol map defined
-      // e.g. follower.symbolMap = { "US500.c": "US500.raw" }
-      const symbol = (follower.symbolMap && follower.symbolMap[masterPosition.symbol])
-        ? follower.symbolMap[masterPosition.symbol]
-        : (SYMBOL_MAP[masterPosition.symbol] || masterPosition.symbol);
+      if (symbol !== masterPosition.symbol) {
+        console.log(`[CopyTrading] Symbol mapped: ${masterPosition.symbol} → ${symbol} for ${follower.accountKey}`);
+      }
 
       const comment = `Copy of ${masterPosition.id}`;
       const sl = config.copySlTp && masterPosition.stopLoss ? masterPosition.stopLoss : undefined;
       const tp = config.copySlTp && masterPosition.takeProfit ? masterPosition.takeProfit : undefined;
 
-      // FIX: use the correct order direction — previously always called createMarketBuyOrder
       const result = isBuy
         ? await conn.createMarketBuyOrder(symbol, lotSize, sl, tp, { comment })
         : await conn.createMarketSellOrder(symbol, lotSize, sl, tp, { comment });
 
-      // Log the comment that actually landed on the broker so we can catch truncation issues
       console.log(
         `[CopyTrading] ✓ Copied ${masterPosition.symbol}${symbol !== masterPosition.symbol ? ` → ${symbol}` : ''} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey}` +
         ` (${lotSize} lots) | result comment: "${result?.comment ?? 'MISSING — broker may have dropped it'}"`
@@ -312,6 +308,15 @@ class CopyTradingService {
 
   async updateConfig(updates) {
     const config = loadConfig();
+    // Strip empty symbolMap entries before saving
+    if (updates.followers) {
+      updates.followers = updates.followers.map(f => ({
+        ...f,
+        symbolMap: Object.fromEntries(
+          Object.entries(f.symbolMap || {}).filter(([k, v]) => k.trim() && v.trim())
+        ),
+      }));
+    }
     const newConfig = { ...config, ...updates };
     await saveConfig(newConfig);
     if (updates.enabled !== undefined || updates.masterAccountKey || updates.followers) {
