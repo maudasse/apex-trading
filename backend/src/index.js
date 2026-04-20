@@ -64,7 +64,28 @@ app.post('/api/restart', async (req, res) => {
 });
 
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// ── Railway Restart ───────────────────────────────────────────────────────
+app.post('/api/railway-restart', async (req, res) => {
+  try {
+    const serviceId = process.env.RAILWAY_SERVICE_ID;
+    const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
+    const apiToken = process.env.RAILWAY_API_TOKEN;
+    if (!serviceId || !environmentId || !apiToken) {
+      return res.status(400).json({ success: false, error: 'Missing Railway env vars' });
+    }
+    const query = `mutation { serviceInstanceRedeploy(serviceId: "${serviceId}", environmentId: "${environmentId}") }`;
+    await fetch('https://backboard.railway.app/graphql/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiToken}` },
+      body: JSON.stringify({ query }),
+    });
+    res.json({ success: true, message: 'Railway restart triggered' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 
 async function boot() {
