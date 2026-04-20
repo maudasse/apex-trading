@@ -233,6 +233,7 @@ class CopyTradingService {
 
       // FIX: use explicit string check so empty string values don't fall through
       // follower.symbolMap = { "US500.c": "US500.raw" }
+      console.log(`[CopyTrading] Follower config for ${follower.accountKey}:`, JSON.stringify(follower));
       const mappedSymbol = follower.symbolMap?.[masterPosition.symbol];
       const symbol = (mappedSymbol && mappedSymbol.trim())
         ? mappedSymbol.trim()
