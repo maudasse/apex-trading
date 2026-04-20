@@ -303,6 +303,57 @@ export default function CopyTrading() {
                   </button>
                 </div>
 
+                {/* Symbol Map */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Symbol Map — broker uses different names? (e.g. US500.c → US500.raw)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {Object.entries(follower.symbolMap || {}).map(([from, to], mapIndex) => (
+                      <div key={mapIndex} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--radius)', color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 8px', width: 120 }}
+                          value={from}
+                          placeholder="Master symbol"
+                          onChange={e => {
+                            const newMap = { ...follower.symbolMap };
+                            delete newMap[from];
+                            newMap[e.target.value] = to;
+                            updateFollower(index, 'symbolMap', newMap);
+                          }}
+                        />
+                        <span style={{ color: 'var(--text3)', fontSize: 11 }}>→</span>
+                        <input
+                          style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--radius)', color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 8px', width: 120 }}
+                          value={to}
+                          placeholder="Broker symbol"
+                          onChange={e => {
+                            const newMap = { ...follower.symbolMap, [from]: e.target.value };
+                            updateFollower(index, 'symbolMap', newMap);
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const newMap = { ...follower.symbolMap };
+                            delete newMap[from];
+                            updateFollower(index, 'symbolMap', newMap);
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 14 }}
+                        >✕</button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const newMap = { ...(follower.symbolMap || {}), '': '' };
+                        updateFollower(index, 'symbolMap', newMap);
+                      }}
+                      style={{ background: 'none', border: '1px dashed var(--border2)', borderRadius: 'var(--radius)', color: 'var(--text3)', cursor: 'pointer', fontSize: 11, padding: '4px 10px', width: 'fit-content', marginTop: 2 }}
+                    >
+                      + Add Symbol
+                    </button>
+                  </div>
+                </div>
+
                 {followerAccount && (
                   <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 8 }}>
                     {followerAccount.label} · Every master trade will be copied at {follower.lotSize} lots

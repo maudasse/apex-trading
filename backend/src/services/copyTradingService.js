@@ -230,18 +230,32 @@ class CopyTradingService {
       if (!conn) throw new Error(`Follower ${follower.accountKey} not connected`);
 
       const isBuy = masterPosition.type === 'POSITION_TYPE_BUY';
+
+      // Global symbol map — maps master symbol to broker-specific symbol
+      // Priority: follower.symbolMap (per-follower) > SYMBOL_MAP (global)
+      const SYMBOL_MAP = {
+        // Add new broker symbol mappings here as needed
+        // Format: "masterSymbol": "brokerSymbol"
+      };
+
+      // Translate symbol if follower has a symbol map defined
+      // e.g. follower.symbolMap = { "US500.c": "US500.raw" }
+      const symbol = (follower.symbolMap && follower.symbolMap[masterPosition.symbol])
+        ? follower.symbolMap[masterPosition.symbol]
+        : (SYMBOL_MAP[masterPosition.symbol] || masterPosition.symbol);
+
       const comment = `Copy of ${masterPosition.id}`;
       const sl = config.copySlTp && masterPosition.stopLoss ? masterPosition.stopLoss : undefined;
       const tp = config.copySlTp && masterPosition.takeProfit ? masterPosition.takeProfit : undefined;
 
       // FIX: use the correct order direction — previously always called createMarketBuyOrder
       const result = isBuy
-        ? await conn.createMarketBuyOrder(masterPosition.symbol, lotSize, sl, tp, { comment })
-        : await conn.createMarketSellOrder(masterPosition.symbol, lotSize, sl, tp, { comment });
+        ? await conn.createMarketBuyOrder(symbol, lotSize, sl, tp, { comment })
+        : await conn.createMarketSellOrder(symbol, lotSize, sl, tp, { comment });
 
       // Log the comment that actually landed on the broker so we can catch truncation issues
       console.log(
-        `[CopyTrading] ✓ Copied ${masterPosition.symbol} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey}` +
+        `[CopyTrading] ✓ Copied ${masterPosition.symbol}${symbol !== masterPosition.symbol ? ` → ${symbol}` : ''} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey}` +
         ` (${lotSize} lots) | result comment: "${result?.comment ?? 'MISSING — broker may have dropped it'}"`
       );
 
