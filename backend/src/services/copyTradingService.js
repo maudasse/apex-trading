@@ -108,20 +108,20 @@ class CopyTradingService {
         masterMap[p.id] = p;
       }
 
-      // Sync each active follower against the master
-      for (const follower of activeFollowers) {
+      // Sync all followers in parallel for minimum delay
+      await Promise.all(activeFollowers.map(async (follower) => {
         try {
           const followerConn = metaApiService.getConnection(follower.accountKey);
           if (!followerConn) {
             console.warn(`[CopyTrading] Follower ${follower.accountKey} not connected — skipping`);
-            continue;
+            return;
           }
 
           // Validate lotSize up front so we never send undefined/0 to the broker
           const lotSize = follower.lotSize ?? follower.volume ?? 0;
           if (!lotSize || lotSize <= 0) {
             console.warn(`[CopyTrading] Follower ${follower.accountKey} has no lotSize — skipping`);
-            continue;
+            return;
           }
 
           // Get follower's current positions
@@ -138,12 +138,12 @@ class CopyTradingService {
           }
 
           // 1. Open trades the master has but the follower doesn't
-          for (const [masterId, masterPos] of Object.entries(masterMap)) {
-            if (followerCopyMap[masterId]) continue; // already copied
+          await Promise.all(Object.entries(masterMap).map(async ([masterId, masterPos]) => {
+            if (followerCopyMap[masterId]) return; // already copied
 
             // Guard against duplicate copies while a previous order is still in-flight
             const pendingKey = `${follower.accountKey}:${masterId}`;
-            if (this.pendingCopies.has(pendingKey)) continue;
+            if (this.pendingCopies.has(pendingKey)) return;
 
             this.pendingCopies.add(pendingKey);
             try {
@@ -151,26 +151,26 @@ class CopyTradingService {
             } finally {
               this.pendingCopies.delete(pendingKey);
             }
-          }
+          }));
 
           // 2. Close trades the follower copied but the master has since closed
-          for (const [masterId, followerPos] of Object.entries(followerCopyMap)) {
-            if (masterMap[masterId]) continue; // master still has it
+          await Promise.all(Object.entries(followerCopyMap).map(async ([masterId, followerPos]) => {
+            if (masterMap[masterId]) return; // master still has it
             await this.closeTrade(followerPos.id, follower.accountKey);
-          }
+          }));
 
           // 3. Sync SL/TP if enabled
           if (config.copySlTp) {
-            for (const [masterId, masterPos] of Object.entries(masterMap)) {
+            await Promise.all(Object.entries(masterMap).map(async ([masterId, masterPos]) => {
               const followerPos = followerCopyMap[masterId];
-              if (!followerPos) continue;
+              if (!followerPos) return;
               if (
                 masterPos.stopLoss !== followerPos.stopLoss ||
                 masterPos.takeProfit !== followerPos.takeProfit
               ) {
                 await this.syncSlTp(masterPos, followerPos.id, follower.accountKey);
               }
-            }
+            }));
           }
 
         } catch (err) {
@@ -178,7 +178,7 @@ class CopyTradingService {
           this.stats.errors.push({ time: new Date().toISOString(), message: err.message });
           if (this.stats.errors.length > 20) this.stats.errors.shift();
         }
-      }
+      }));
 
     } catch (err) {
       console.error('[CopyTrading] Tick error:', err.message);
