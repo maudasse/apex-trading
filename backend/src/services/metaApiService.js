@@ -56,6 +56,17 @@ class MetaApiService {
       // Position listener — must extend SynchronizationListener for SDK v27+
       const self = this;
       class PositionListener extends SynchronizationListener {
+        async onPositionAdded(instanceIndex, pos) {
+          if (!self.positionsCache[key]) self.positionsCache[key] = new Map();
+          const enriched = { ...pos, accountKey: key, platform, accountLabel: label };
+          self.positionsCache[key].set(pos.id, enriched);
+          console.log(`[MetaApi] New position opened on "${label}": ${pos.symbol} (${pos.id})`);
+          if (self.onNewPosition) self.onNewPosition(key, enriched);
+          if (self.onPositionUpdate) self.onPositionUpdate(key, self.getPositionsFromCache(key));
+          if (global.broadcast) {
+            global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
+          }
+        }
         async onPositionUpdated(instanceIndex, pos) {
           if (!self.positionsCache[key]) self.positionsCache[key] = new Map();
           const enriched = { ...pos, accountKey: key, platform, accountLabel: label };
