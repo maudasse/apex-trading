@@ -44,7 +44,40 @@ async function saveConfig(config) {
   // Always save to file
   saveConfigToFile(config);
 
-  // Config is persisted to file only — Railway env var is set manually to avoid redeploy loops
+  // Also persist to Railway env variable via Railway API so it survives restarts
+  try {
+    const projectId = process.env.RAILWAY_PROJECT_ID;
+    const serviceId = process.env.RAILWAY_SERVICE_ID;
+    const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
+    const apiToken = process.env.RAILWAY_API_TOKEN;
+
+    if (projectId && serviceId && environmentId && apiToken) {
+      const configStr = JSON.stringify(config);
+      const query = `
+        mutation {
+          variableUpsert(input: {
+            projectId: "${projectId}",
+            serviceId: "${serviceId}",
+            environmentId: "${environmentId}",
+            name: "COPY_TRADING_CONFIG",
+            value: ${JSON.stringify(configStr)}
+          })
+        }
+      `;
+      await fetch('https://backboard.railway.app/graphql/v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({ query }),
+      });
+      console.log('[CopyTrading] Config saved to Railway env variable');
+    }
+  } catch (e) {
+    // Non-fatal — file is still saved, just won't survive a full restart
+    console.warn('[CopyTrading] Could not save to Railway env variable:', e.message);
+  }
 }
 
 class CopyTradingService {
@@ -67,15 +100,35 @@ class CopyTradingService {
     if (this.running) return;
     this.running = true;
     const followerKeys = config.followers.map(f => f.accountKey).join(', ');
-    console.log(`[CopyTrading] Started — Master: ${config.masterAccountKey} → Followers: ${followerKeys}`);
+    console.log(`[CopyTrading] Started (streaming) — Master: ${config.masterAccountKey} → Followers: ${followerKeys}`);
+
+    // React to master position updates via streaming — no polling needed
+    const self = this;
+    metaApiService.onPositionUpdate = (accountKey, positions) => {
+      const cfg = loadConfig();
+      if (!cfg.enabled) return;
+      if (accountKey === cfg.masterAccountKey) {
+        self.tick();
+      }
+    };
+    metaApiService.onPositionClosed = (accountKey, positionId) => {
+      const cfg = loadConfig();
+      if (!cfg.enabled) return;
+      if (accountKey === cfg.masterAccountKey) {
+        self.tick();
+      }
+    };
+
+    // Run once on start to sync current state
     this.tick();
-    this.intervalHandle = setInterval(() => this.tick(), 5000);
   }
 
   stop() {
     this.running = false;
     if (this.intervalHandle) clearInterval(this.intervalHandle);
     this.pendingCopies.clear();
+    metaApiService.onPositionUpdate = null;
+    metaApiService.onPositionClosed = null;
     console.log('[CopyTrading] Stopped');
   }
 
@@ -108,20 +161,20 @@ class CopyTradingService {
         masterMap[p.id] = p;
       }
 
-      // Sync all followers in parallel for minimum delay
-      await Promise.all(activeFollowers.map(async (follower) => {
+      // Sync each active follower against the master
+      for (const follower of activeFollowers) {
         try {
           const followerConn = metaApiService.getConnection(follower.accountKey);
           if (!followerConn) {
             console.warn(`[CopyTrading] Follower ${follower.accountKey} not connected — skipping`);
-            return;
+            continue;
           }
 
           // Validate lotSize up front so we never send undefined/0 to the broker
           const lotSize = follower.lotSize ?? follower.volume ?? 0;
           if (!lotSize || lotSize <= 0) {
             console.warn(`[CopyTrading] Follower ${follower.accountKey} has no lotSize — skipping`);
-            return;
+            continue;
           }
 
           // Get follower's current positions
@@ -138,12 +191,12 @@ class CopyTradingService {
           }
 
           // 1. Open trades the master has but the follower doesn't
-          await Promise.all(Object.entries(masterMap).map(async ([masterId, masterPos]) => {
-            if (followerCopyMap[masterId]) return; // already copied
+          for (const [masterId, masterPos] of Object.entries(masterMap)) {
+            if (followerCopyMap[masterId]) continue; // already copied
 
             // Guard against duplicate copies while a previous order is still in-flight
             const pendingKey = `${follower.accountKey}:${masterId}`;
-            if (this.pendingCopies.has(pendingKey)) return;
+            if (this.pendingCopies.has(pendingKey)) continue;
 
             this.pendingCopies.add(pendingKey);
             try {
@@ -151,26 +204,26 @@ class CopyTradingService {
             } finally {
               this.pendingCopies.delete(pendingKey);
             }
-          }));
+          }
 
           // 2. Close trades the follower copied but the master has since closed
-          await Promise.all(Object.entries(followerCopyMap).map(async ([masterId, followerPos]) => {
-            if (masterMap[masterId]) return; // master still has it
+          for (const [masterId, followerPos] of Object.entries(followerCopyMap)) {
+            if (masterMap[masterId]) continue; // master still has it
             await this.closeTrade(followerPos.id, follower.accountKey);
-          }));
+          }
 
           // 3. Sync SL/TP if enabled
           if (config.copySlTp) {
-            await Promise.all(Object.entries(masterMap).map(async ([masterId, masterPos]) => {
+            for (const [masterId, masterPos] of Object.entries(masterMap)) {
               const followerPos = followerCopyMap[masterId];
-              if (!followerPos) return;
+              if (!followerPos) continue;
               if (
                 masterPos.stopLoss !== followerPos.stopLoss ||
                 masterPos.takeProfit !== followerPos.takeProfit
               ) {
                 await this.syncSlTp(masterPos, followerPos.id, follower.accountKey);
               }
-            }));
+            }
           }
 
         } catch (err) {
@@ -178,7 +231,7 @@ class CopyTradingService {
           this.stats.errors.push({ time: new Date().toISOString(), message: err.message });
           if (this.stats.errors.length > 20) this.stats.errors.shift();
         }
-      }));
+      }
 
     } catch (err) {
       console.error('[CopyTrading] Tick error:', err.message);
@@ -198,26 +251,29 @@ class CopyTradingService {
 
       const isBuy = masterPosition.type === 'POSITION_TYPE_BUY';
 
-      // FIX: use explicit string check so empty string values don't fall through
-      // follower.symbolMap = { "US500.c": "US500.raw" }
-      console.log(`[CopyTrading] Follower config for ${follower.accountKey}:`, JSON.stringify(follower));
-      const mappedSymbol = follower.symbolMap?.[masterPosition.symbol];
-      const symbol = (mappedSymbol && mappedSymbol.trim())
-        ? mappedSymbol.trim()
-        : masterPosition.symbol;
+      // Global symbol map — maps master symbol to broker-specific symbol
+      // Priority: follower.symbolMap (per-follower) > SYMBOL_MAP (global)
+      const SYMBOL_MAP = {
+        // Add new broker symbol mappings here as needed
+        // Format: "masterSymbol": "brokerSymbol"
+      };
 
-      if (symbol !== masterPosition.symbol) {
-        console.log(`[CopyTrading] Symbol mapped: ${masterPosition.symbol} → ${symbol} for ${follower.accountKey}`);
-      }
+      // Translate symbol if follower has a symbol map defined
+      // e.g. follower.symbolMap = { "US500.c": "US500.raw" }
+      const symbol = (follower.symbolMap && follower.symbolMap[masterPosition.symbol])
+        ? follower.symbolMap[masterPosition.symbol]
+        : (SYMBOL_MAP[masterPosition.symbol] || masterPosition.symbol);
 
       const comment = `Copy of ${masterPosition.id}`;
       const sl = config.copySlTp && masterPosition.stopLoss ? masterPosition.stopLoss : undefined;
       const tp = config.copySlTp && masterPosition.takeProfit ? masterPosition.takeProfit : undefined;
 
+      // FIX: use the correct order direction — previously always called createMarketBuyOrder
       const result = isBuy
         ? await conn.createMarketBuyOrder(symbol, lotSize, sl, tp, { comment })
         : await conn.createMarketSellOrder(symbol, lotSize, sl, tp, { comment });
 
+      // Log the comment that actually landed on the broker so we can catch truncation issues
       console.log(
         `[CopyTrading] ✓ Copied ${masterPosition.symbol}${symbol !== masterPosition.symbol ? ` → ${symbol}` : ''} ${isBuy ? 'BUY' : 'SELL'} → ${follower.accountKey}` +
         ` (${lotSize} lots) | result comment: "${result?.comment ?? 'MISSING — broker may have dropped it'}"`
@@ -276,15 +332,6 @@ class CopyTradingService {
 
   async updateConfig(updates) {
     const config = loadConfig();
-    // Strip empty symbolMap entries before saving
-    if (updates.followers) {
-      updates.followers = updates.followers.map(f => ({
-        ...f,
-        symbolMap: Object.fromEntries(
-          Object.entries(f.symbolMap || {}).filter(([k, v]) => k.trim() && v.trim())
-        ),
-      }));
-    }
     const newConfig = { ...config, ...updates };
     await saveConfig(newConfig);
     if (updates.enabled !== undefined || updates.masterAccountKey || updates.followers) {

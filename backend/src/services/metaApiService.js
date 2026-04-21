@@ -22,15 +22,20 @@ function parseAccountsFromEnv() {
 class MetaApiService {
   constructor() {
     this.api = null;
-    this.registry = {};
+    this.registry = {}; // accountKey -> { account, connection, rpcConnection, platform, label, key }
+    this.positionsCache = {}; // accountKey -> Map<positionId, position>
+    this.accountInfoCache = {}; // accountKey -> accountInfo
     this.initialized = false;
+    this.onPositionUpdate = null; // callback(accountKey, positions)
+    this.onNewPosition = null;    // callback(accountKey, position)
+    this.onPositionClosed = null; // callback(accountKey, positionId)
   }
 
   async initialize() {
     if (!process.env.META_API_TOKEN) throw new Error('META_API_TOKEN is not set in .env');
     this.api = new MetaApi(process.env.META_API_TOKEN, {
-  domain: 'agiliumtrade.agiliumtrade.ai'
-});
+      domain: 'agiliumtrade.agiliumtrade.ai'
+    });
     const accountDefs = parseAccountsFromEnv();
     if (accountDefs.length === 0) throw new Error('No valid account IDs found in .env.');
     console.log(`[MetaApi] Found ${accountDefs.length} account(s) in .env`);
@@ -43,25 +48,106 @@ class MetaApiService {
       console.log(`[MetaApi] Connecting "${label}" (${key})...`);
       const account = await this.api.metatraderAccountApi.getAccount(id);
       await account.waitConnected();
-      const connection = account.getRPCConnection();
+
+      // Streaming connection — uses 0 CPU credits
+      const connection = account.getStreamingConnection();
+
+      // Position listener
+      const self = this;
+      const listener = {
+        onPositionUpdated(pos) {
+          // Update our cache
+          if (!self.positionsCache[key]) self.positionsCache[key] = new Map();
+          const enriched = { ...pos, accountKey: key, platform, accountLabel: label };
+          self.positionsCache[key].set(pos.id, enriched);
+          // Notify bot
+          if (self.onPositionUpdate) self.onPositionUpdate(key, self.getPositionsFromCache(key));
+          if (global.broadcast) {
+            global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
+          }
+        },
+        onPositionRemoved(positionId) {
+          if (self.positionsCache[key]) {
+            self.positionsCache[key].delete(positionId);
+          }
+          if (self.onPositionClosed) self.onPositionClosed(key, positionId);
+          if (global.broadcast) {
+            global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
+          }
+        },
+        onConnected() {
+          console.log(`[MetaApi] "${label}" streaming connected ✓`);
+        },
+        onDisconnected() {
+          console.warn(`[MetaApi] "${label}" streaming disconnected — will auto-reconnect`);
+        },
+        onError(err) {
+          console.error(`[MetaApi] "${label}" streaming error:`, err.message);
+        },
+        onAccountInformationUpdated(info) {
+          self.accountInfoCache[key] = { ...info, accountKey: key, platform, label };
+        },
+      };
+
+      connection.addSynchronizationListener(listener);
       await connection.connect();
       await connection.waitSynchronized();
-      this.registry[key] = { account, connection, platform, label, key };
-      console.log(`[MetaApi] "${label}" connected ✓`);
+
+      // Also keep an RPC connection for write operations (modifyPosition, createOrder, closePosition)
+      const rpcConnection = account.getRPCConnection();
+      await rpcConnection.connect();
+      await rpcConnection.waitSynchronized();
+
+      // Seed positions cache from initial state
+      this.positionsCache[key] = new Map();
+      const initialPositions = connection.terminalState.positions || [];
+      for (const pos of initialPositions) {
+        this.positionsCache[key].set(pos.id, { ...pos, accountKey: key, platform, accountLabel: label });
+      }
+
+      // Seed account info cache
+      if (connection.terminalState.accountInformation) {
+        this.accountInfoCache[key] = { ...connection.terminalState.accountInformation, accountKey: key, platform, label };
+      }
+
+      this.registry[key] = { account, connection, rpcConnection, platform, label, key };
+      console.log(`[MetaApi] "${label}" ready ✓ (${initialPositions.length} positions loaded)`);
+
     } catch (err) {
       console.error(`[MetaApi] Failed to connect "${label}":`, err.message);
     }
   }
 
-  getConnection(accountKey) { return this.registry[accountKey]?.connection || null; }
+  // ── Cache accessors ──────────────────────────────────────────────
+  getPositionsFromCache(accountKey) {
+    const cache = this.positionsCache[accountKey];
+    if (!cache) return [];
+    return Array.from(cache.values());
+  }
+
+  getAllPositionsFromCache() {
+    const all = [];
+    for (const key of Object.keys(this.positionsCache)) {
+      all.push(...this.getPositionsFromCache(key));
+    }
+    return all;
+  }
+
+  // ── RPC connection for writes ────────────────────────────────────
+  getRpcConnection(accountKey) { return this.registry[accountKey]?.rpcConnection || null; }
+  getConnection(accountKey) { return this.registry[accountKey]?.rpcConnection || null; } // backwards compat
   getAccountKeys() { return Object.keys(this.registry); }
   getAccountMeta(accountKey) { return this.registry[accountKey] || null; }
   getAllAccountMeta() {
-    return Object.values(this.registry).map(({ account, connection, ...meta }) => meta);
+    return Object.values(this.registry).map(({ account, connection, rpcConnection, ...meta }) => meta);
   }
 
+  // ── Account info ─────────────────────────────────────────────────
   async getAccountInfo(accountKey) {
-    const conn = this.getConnection(accountKey);
+    // Use cache if available (updated via streaming)
+    if (this.accountInfoCache[accountKey]) return this.accountInfoCache[accountKey];
+    // Fall back to RPC
+    const conn = this.getRpcConnection(accountKey);
     if (!conn) throw new Error(`No connection for "${accountKey}"`);
     const info = await conn.getAccountInformation();
     const meta = this.getAccountMeta(accountKey);
@@ -77,25 +163,18 @@ class MetaApiService {
     return results;
   }
 
+  // ── Positions — serve from cache (no API call, no credits) ───────
   async getPositions(accountKey) {
-    const conn = this.getConnection(accountKey);
-    if (!conn) throw new Error(`No connection for "${accountKey}"`);
-    const meta = this.getAccountMeta(accountKey);
-    const positions = await conn.getPositions();
-    return positions.map(p => ({ ...p, accountKey, platform: meta.platform, accountLabel: meta.label }));
+    return this.getPositionsFromCache(accountKey);
   }
 
   async getAllPositions() {
-    const results = [];
-    for (const key of this.getAccountKeys()) {
-      try { results.push(...await this.getPositions(key)); }
-      catch (err) { console.error(`[MetaApi] Error fetching positions for ${key}:`, err.message); }
-    }
-    return results;
+    return this.getAllPositionsFromCache();
   }
 
+  // ── Write operations — use RPC connection ────────────────────────
   async modifyPosition(accountKey, positionId, stopLoss, takeProfit) {
-    const conn = this.getConnection(accountKey);
+    const conn = this.getRpcConnection(accountKey);
     if (!conn) throw new Error(`No connection for "${accountKey}"`);
     const result = await conn.modifyPosition(positionId, stopLoss, takeProfit);
     const meta = this.getAccountMeta(accountKey);
@@ -103,8 +182,9 @@ class MetaApiService {
     return result;
   }
 
+  // ── History — RPC (only called on demand, not in a loop) ─────────
   async getHistory(accountKey, daysBack = 7) {
-    const conn = this.getConnection(accountKey);
+    const conn = this.getRpcConnection(accountKey);
     if (!conn) throw new Error(`No connection for "${accountKey}"`);
     const startTime = new Date();
     startTime.setDate(startTime.getDate() - daysBack);

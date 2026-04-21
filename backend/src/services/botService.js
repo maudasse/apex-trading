@@ -1,61 +1,66 @@
 const metaApiService = require('./metaApiService');
 const rulesStore = require('./rulesStore');
 
-const processedPositions = new Map();
-const failedPositions = new Set(); // positions that returned "not found" — stop retrying them
-const POLL_INTERVAL_MS = 1000; // 1 second — near instant!
+const processedPositions = new Map(); // positionId -> { sl, tp, breakevenApplied }
+const failedPositions = new Set();    // positions that returned "not found"
 
 class BotService {
   constructor() {
     this.running = false;
-    this.intervalHandle = null;
     this.stats = { totalModified: 0, lastRun: null, errors: [] };
   }
 
   async start() {
     if (this.running) return;
     this.running = true;
-    console.log('[Bot] ⚡ Fast bot started — polling every 1 second');
-    await this.tick();
-    this.intervalHandle = setInterval(() => this.tick(), POLL_INTERVAL_MS);
+    console.log('[Bot] ⚡ Streaming bot started — reacting to position events instantly');
+
+    // Hook into metaApiService position updates
+    metaApiService.onPositionUpdate = (accountKey, positions) => {
+      if (!this.running) return;
+      const rules = rulesStore.getRules();
+      if (!rules.global.enabled) return;
+      this.stats.lastRun = new Date().toISOString();
+      // Process all positions for this account
+      for (const position of positions) {
+        this.processPosition(position, rules).catch(err => {
+          console.error('[Bot] Error processing position:', err.message);
+        });
+      }
+      // Broadcast updated positions to frontend
+      if (global.broadcast) {
+        global.broadcast({ type: 'POSITIONS_UPDATE', data: metaApiService.getAllPositionsFromCache() });
+      }
+    };
+
+    metaApiService.onPositionClosed = (accountKey, positionId) => {
+      processedPositions.delete(positionId);
+      failedPositions.delete(positionId);
+    };
+
+    // Process all currently open positions on startup
+    const rules = rulesStore.getRules();
+    if (rules.global.enabled) {
+      const positions = metaApiService.getAllPositionsFromCache();
+      for (const position of positions) {
+        await this.processPosition(position, rules);
+      }
+    }
+
+    // Broadcast initial state
+    if (global.broadcast) {
+      global.broadcast({ type: 'POSITIONS_UPDATE', data: metaApiService.getAllPositionsFromCache() });
+    }
   }
 
   stop() {
     this.running = false;
-    if (this.intervalHandle) clearInterval(this.intervalHandle);
+    metaApiService.onPositionUpdate = null;
+    metaApiService.onPositionClosed = null;
     console.log('[Bot] Bot stopped');
   }
 
-  async tick() {
-    const rules = rulesStore.getRules();
-    if (!rules.global.enabled) return;
-    this.stats.lastRun = new Date().toISOString();
-    try {
-      const positions = await metaApiService.getAllPositions();
-      if (global.broadcast) global.broadcast({ type: 'POSITIONS_UPDATE', data: positions });
-
-      const activeIds = new Set(positions.map(p => p.id));
-
-      // Clean up closed positions from both maps so we stop tracking them
-      for (const id of processedPositions.keys()) {
-        if (!activeIds.has(id)) processedPositions.delete(id);
-      }
-      // Also clear from failedPositions if they've since disappeared (already closed)
-      for (const id of failedPositions) {
-        if (!activeIds.has(id)) failedPositions.delete(id);
-      }
-
-      for (const position of positions) await this.processPosition(position, rules);
-
-    } catch (err) {
-      console.error('[Bot] Tick error:', err.message);
-      this.stats.errors.push({ time: new Date().toISOString(), message: err.message });
-      if (this.stats.errors.length > 50) this.stats.errors.shift();
-    }
-  }
-
   async processPosition(position, rules) {
-    // Skip positions that previously returned "not found" — they're closed on the broker
     if (failedPositions.has(position.id)) return;
 
     const rule = rulesStore.getRuleForSymbol(position.symbol);
@@ -174,7 +179,6 @@ class BotService {
     } catch (err) {
       const msg = err.message || '';
       if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('position not found')) {
-        // Position is closed on the broker — blacklist it so we never retry
         failedPositions.add(position.id);
         processedPositions.delete(position.id);
         console.warn(`[Bot] Position ${position.id} not found on broker — removing from tracking`);
