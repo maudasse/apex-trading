@@ -3,6 +3,7 @@ const rulesStore = require('./rulesStore');
 
 const processedPositions = new Map(); // positionId -> { sl, tp, breakevenApplied }
 const failedPositions = new Set();    // positions that returned "not found"
+const inFlightPositions = new Map();  // positionId -> timestamp — debounce guard
 
 class BotService {
   constructor() {
@@ -63,6 +64,10 @@ class BotService {
   async processPosition(position, rules) {
     if (failedPositions.has(position.id)) return;
 
+    // Debounce: skip if a modification for this position is already in-flight (within 10s)
+    const lastFlight = inFlightPositions.get(position.id);
+    if (lastFlight && Date.now() - lastFlight < 10000) return;
+
     const rule = rulesStore.getRuleForSymbol(position.symbol);
     if (!rule.enabled) return;
 
@@ -70,7 +75,8 @@ class BotService {
     if (sl === null && tp === null) return;
 
     const prev = processedPositions.get(position.id);
-    const tolerance = 0.01;
+    // Tolerance scaled to price magnitude — 0.1% of price covers indices, forex, metals
+    const tolerance = Math.max(0.01, sl * 0.001);
     const slAlreadySet = position.stopLoss && Math.abs(position.stopLoss - sl) < tolerance;
     const tpAlreadySet = position.takeProfit && Math.abs(position.takeProfit - tp) < tolerance;
     if (slAlreadySet && tpAlreadySet) return;
@@ -159,6 +165,8 @@ class BotService {
   }
 
   async applyModification(position, sl, tp) {
+    // Mark in-flight to block duplicate modifications for 10 seconds
+    inFlightPositions.set(position.id, Date.now());
     try {
       await metaApiService.modifyPosition(position.accountKey, position.id, sl, tp);
       this.stats.totalModified++;
@@ -183,6 +191,7 @@ class BotService {
         processedPositions.delete(position.id);
         console.warn(`[Bot] Position ${position.id} not found on broker — removing from tracking`);
       } else {
+        inFlightPositions.delete(position.id); // allow retry on non-fatal errors
         console.error(`[Bot] Failed to modify ${position.id}:`, msg);
         this.stats.errors.push({ time: new Date().toISOString(), message: msg });
         if (this.stats.errors.length > 50) this.stats.errors.shift();
