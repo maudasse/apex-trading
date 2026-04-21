@@ -16,7 +16,7 @@ const NAV = [
 ];
 
 function MiniCrosshair({ active }) {
-  const color = active ? 'var(--accent)' : 'var(--text3)';
+  const color = active ? 'var(--yellow)' : 'var(--text3)';
   const red = active ? 'var(--red)' : 'var(--text3)';
   return (
     <svg width="14" height="14" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">

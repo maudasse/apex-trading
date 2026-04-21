@@ -158,9 +158,9 @@ body {
 .nav-item:hover { background: var(--bg3); color: var(--text); }
 
 .nav-item.active {
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid rgba(0,212,170,0.2);
+  background: var(--yellow-dim);
+  color: var(--yellow);
+  border: 1px solid rgba(255,211,42,0.2);
 }
 
 .nav-icon { font-size: 14px; opacity: 0.8; }
@@ -206,7 +206,7 @@ body {
 
 .page-subtitle {
   font-size: 11px;
-  color: var(--accent);
+  color: var(--yellow);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-top: 4px;
