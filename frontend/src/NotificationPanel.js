@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 
 const TYPE_CONFIG = {
   success: { icon: '✓', label: 'SL/TP SET', color: 'var(--yellow)', dim: 'var(--yellow-dim)' },
-  copy:    { icon: '⇄', label: 'COPIED',    color: 'var(--accent)', dim: 'var(--accent-dim)' },
+  copy:    { icon: '⇄', label: 'COPIED',    color: '#ffffff', dim: 'var(--accent-dim)' },
   info:    { icon: 'ℹ', label: 'INFO',      color: 'var(--text2)',  dim: 'var(--panel2)' },
 };
 
