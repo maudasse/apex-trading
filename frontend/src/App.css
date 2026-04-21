@@ -311,7 +311,7 @@ tr:hover td { background: var(--bg3); }
 .badge-buy { background: var(--yellow-dim); color: var(--yellow); }
 .badge-sell { background: var(--red-dim); color: var(--red); }
 .badge-mt4 { background: var(--yellow-dim); color: var(--yellow); }
-.badge-mt5 { background: var(--accent-dim); color: var(--accent2); }
+.badge-mt5 { background: var(--accent-dim); color: #ffffff; }
 
 /* Button */
 .btn {
@@ -330,12 +330,12 @@ tr:hover td { background: var(--bg3); }
 .btn:hover { border-color: var(--yellow); color: var(--yellow); }
 
 .btn-primary {
-  background: var(--accent);
+  background: var(--yellow);
   color: var(--bg);
-  border-color: var(--accent);
+  border-color: var(--yellow);
   font-weight: 500;
 }
-.btn-primary:hover { background: #00efc0; color: var(--bg); border-color: #00efc0; }
+.btn-primary:hover { background: #ffe566; color: var(--bg); border-color: #ffe566; }
 
 .btn-danger { border-color: var(--red); color: var(--red); }
 .btn-danger:hover { background: var(--red-dim); }
