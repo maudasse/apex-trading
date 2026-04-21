@@ -1,4 +1,5 @@
 const MetaApi = require('metaapi.cloud-sdk').default;
+const { SynchronizationListener } = require('metaapi.cloud-sdk');
 
 function parseAccountsFromEnv() {
   const accounts = [];
@@ -52,21 +53,19 @@ class MetaApiService {
       // Streaming connection — uses 0 CPU credits
       const connection = account.getStreamingConnection();
 
-      // Position listener
+      // Position listener — must extend SynchronizationListener for SDK v27+
       const self = this;
-      const listener = {
-        onPositionUpdated(pos) {
-          // Update our cache
+      class PositionListener extends SynchronizationListener {
+        async onPositionUpdated(instanceIndex, pos) {
           if (!self.positionsCache[key]) self.positionsCache[key] = new Map();
           const enriched = { ...pos, accountKey: key, platform, accountLabel: label };
           self.positionsCache[key].set(pos.id, enriched);
-          // Notify bot
           if (self.onPositionUpdate) self.onPositionUpdate(key, self.getPositionsFromCache(key));
           if (global.broadcast) {
             global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
           }
-        },
-        onPositionRemoved(positionId) {
+        }
+        async onPositionRemoved(instanceIndex, positionId) {
           if (self.positionsCache[key]) {
             self.positionsCache[key].delete(positionId);
           }
@@ -74,20 +73,18 @@ class MetaApiService {
           if (global.broadcast) {
             global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
           }
-        },
-        onConnected() {
+        }
+        async onConnected(instanceIndex, replicas) {
           console.log(`[MetaApi] "${label}" streaming connected ✓`);
-        },
-        onDisconnected() {
+        }
+        async onDisconnected(instanceIndex) {
           console.warn(`[MetaApi] "${label}" streaming disconnected — will auto-reconnect`);
-        },
-        onError(err) {
-          console.error(`[MetaApi] "${label}" streaming error:`, err.message);
-        },
-        onAccountInformationUpdated(info) {
+        }
+        async onAccountInformationUpdated(instanceIndex, info) {
           self.accountInfoCache[key] = { ...info, accountKey: key, platform, label };
-        },
-      };
+        }
+      }
+      const listener = new PositionListener();
 
       connection.addSynchronizationListener(listener);
       await connection.connect();
