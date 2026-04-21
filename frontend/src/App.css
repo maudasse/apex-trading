@@ -609,3 +609,7 @@ tr:hover td { background: var(--bg3); }
 /* Remove old floating notifications — replaced by panel */
 .notifications { display: none; }
 .notification  { display: none; }
+
+/* Align notification panel top with account cards */
+.notif-panel { margin-top: 80px; height: calc(100vh - 80px); }
+
