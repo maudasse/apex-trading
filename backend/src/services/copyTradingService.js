@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const metaApiService = require('./metaApiService');
+const botService = require('./botService');
 
 const CONFIG_FILE = path.join(__dirname, '../../data/copyConfig.json');
 const DEFAULT_CONFIG = { enabled: false, masterAccountKey: null, followers: [], copySlTp: true };
@@ -105,9 +106,13 @@ class CopyTradingService {
     const followerKeys = config.followers.map(f => f.accountKey).join(', ');
     console.log(`[CopyTrading] Started (streaming) — Master: ${config.masterAccountKey} → Followers: ${followerKeys}`);
 
-    // React to master position updates via streaming — no polling needed
+    // React to master position updates via streaming — chain with bot's hooks
     const self = this;
+    const prevPositionUpdate = metaApiService.onPositionUpdate;
+    const prevPositionClosed = metaApiService.onPositionClosed;
+
     metaApiService.onPositionUpdate = (accountKey, positions) => {
+      if (prevPositionUpdate) prevPositionUpdate(accountKey, positions);
       const cfg = loadConfig();
       if (!cfg.enabled) return;
       if (accountKey === cfg.masterAccountKey) {
@@ -115,6 +120,7 @@ class CopyTradingService {
       }
     };
     metaApiService.onPositionClosed = (accountKey, positionId) => {
+      if (prevPositionClosed) prevPositionClosed(accountKey, positionId);
       const cfg = loadConfig();
       if (!cfg.enabled) return;
       if (accountKey === cfg.masterAccountKey) {
@@ -296,6 +302,27 @@ class CopyTradingService {
       );
 
       this.stats.totalCopied++;
+
+      // Trigger SL/TP bot on the new follower position after broker confirms it (3s delay)
+      const capturedMasterPositionId = masterPosition.id;
+      const capturedFollowerAccountKey = follower.accountKey;
+      setTimeout(async () => {
+        try {
+          const followerPositions = metaApiService.getPositionsFromCache(capturedFollowerAccountKey);
+          const rules = require('./rulesStore').getRules();
+          if (rules.global.enabled) {
+            for (const pos of followerPositions) {
+              const m = pos.comment?.match(/^Copy of (\S+)/);
+              if (m && m[1] === capturedMasterPositionId) {
+                await botService.processPosition(pos, rules);
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[CopyTrading] Could not apply SL/TP to copied position:', e.message);
+        }
+      }, 3000);
 
       if (global.broadcast) {
         global.broadcast({
