@@ -123,8 +123,8 @@ export default function CopyTrading() {
       {/* Status Banner */}
       <div className="section" style={{
         padding: '16px 20px',
-        background: localConfig.enabled && isConfigured ? 'rgba(0,212,170,0.08)' : 'var(--panel)',
-        border: `1px solid ${localConfig.enabled && isConfigured ? 'rgba(0,212,170,0.3)' : 'var(--border)'}`,
+        background: localConfig.enabled && isConfigured ? 'rgba(255,211,42,0.08)' : 'var(--panel)',
+        border: `1px solid ${localConfig.enabled && isConfigured ? 'rgba(255,211,42,0.3)' : 'var(--border)'}`,
         borderRadius: 'var(--radius)',
         display: 'flex',
         alignItems: 'center',
@@ -135,7 +135,7 @@ export default function CopyTrading() {
             fontFamily: 'var(--font-display)',
             fontSize: 14,
             fontWeight: 600,
-            color: localConfig.enabled && isConfigured ? 'var(--accent)' : 'var(--text)',
+            color: localConfig.enabled && isConfigured ? 'var(--yellow)' : 'var(--text)',
           }}>
             {localConfig.enabled && isConfigured
               ? `● Active — ${followers.filter(f => f.enabled !== false).length} follower(s)`
@@ -176,7 +176,7 @@ export default function CopyTrading() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Active Mirrors</div>
-          <div className="stat-value" style={{ color: 'var(--accent2)' }}>
+          <div className="stat-value" style={{ color: 'var(--yellow)' }}>
             {Object.keys(data.config?.copiedTrades || {}).length}
           </div>
           <div className="stat-sub">Currently open</div>
@@ -193,10 +193,10 @@ export default function CopyTrading() {
           background: 'var(--bg3)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
-          borderTop: '3px solid var(--accent)',
+          borderTop: '3px solid var(--yellow)',
           marginBottom: 20,
         }}>
-          <div style={{ fontSize: 10, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: 'var(--yellow)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>
             ★ Master Account
           </div>
           <div className="grid-2">
@@ -231,7 +231,7 @@ export default function CopyTrading() {
         {/* Followers */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: 'var(--accent2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div style={{ fontSize: 10, color: 'var(--yellow)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               ◎ Follower Accounts ({followers.length})
             </div>
             {availableFollowers.length > followers.length && (
@@ -256,7 +256,7 @@ export default function CopyTrading() {
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius)',
                 marginBottom: 8,
-                borderLeft: `3px solid ${follower.enabled !== false ? 'var(--accent2)' : 'var(--border2)'}`,
+                borderLeft: `3px solid ${follower.enabled !== false ? 'var(--yellow)' : 'var(--border2)'}`,
               }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   {/* Account selector */}
@@ -373,7 +373,7 @@ export default function CopyTrading() {
           })}
         </div>
 
-        <button className="btn btn-primary" onClick={save} disabled={saving}>
+        <button style={{ padding: "8px 20px", borderRadius: "var(--radius)", border: "1px solid var(--yellow)", background: "var(--yellow)", color: "#080c10", fontFamily: "var(--font-mono)", fontSize: 12, cursor: "pointer", fontWeight: 600 }} onClick={save} disabled={saving}>
           {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save Configuration'}
         </button>
       </div>

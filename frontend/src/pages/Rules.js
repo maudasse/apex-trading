@@ -9,7 +9,6 @@ export default function Rules() {
   const [newSymbolPips, setNewSymbolPips] = useState({ stopLossPips: 50, takeProfitPips: 100 });
 
   const load = () => getRules().then(setRules).catch(console.error);
-
   useEffect(() => { load(); }, []);
 
   const saveGlobal = async () => {
@@ -42,6 +41,19 @@ export default function Rules() {
 
   const g = rules.global;
 
+  const yellowBtn = {
+    padding: '8px 20px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--yellow)',
+    background: 'var(--yellow)',
+    color: '#080c10',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 12,
+    cursor: 'pointer',
+    fontWeight: 600,
+    transition: 'all 0.18s ease',
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -69,7 +81,6 @@ export default function Rules() {
       <div className="section card">
         <div className="card-title">Global Rules</div>
 
-        {/* Mode Selector */}
         <div className="field" style={{ marginBottom: 20 }}>
           <label>SL/TP Mode</label>
           <select value={g.mode} onChange={e => updateGlobal('mode', e.target.value)}>
@@ -83,41 +94,23 @@ export default function Rules() {
             <>
               <div className="field">
                 <label>Stop Loss (pips)</label>
-                <input
-                  type="number"
-                  value={g.stopLossPips}
-                  onChange={e => updateGlobal('stopLossPips', parseFloat(e.target.value))}
-                />
+                <input type="number" value={g.stopLossPips} onChange={e => updateGlobal('stopLossPips', parseFloat(e.target.value))} />
               </div>
               <div className="field">
                 <label>Take Profit (pips)</label>
-                <input
-                  type="number"
-                  value={g.takeProfitPips}
-                  onChange={e => updateGlobal('takeProfitPips', parseFloat(e.target.value))}
-                />
+                <input type="number" value={g.takeProfitPips} onChange={e => updateGlobal('takeProfitPips', parseFloat(e.target.value))} />
               </div>
             </>
           )}
           {g.mode === 'ratio' && (
             <div className="field">
               <label>Risk:Reward Ratio</label>
-              <input
-                type="number"
-                step="0.5"
-                value={g.riskRewardRatio}
-                onChange={e => updateGlobal('riskRewardRatio', parseFloat(e.target.value))}
-              />
+              <input type="number" step="0.5" value={g.riskRewardRatio} onChange={e => updateGlobal('riskRewardRatio', parseFloat(e.target.value))} />
             </div>
           )}
         </div>
 
-        {/* Advanced: Trailing Stop */}
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          paddingTop: 20,
-          marginBottom: 20,
-        }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, marginBottom: 20 }}>
           <div style={{ marginBottom: 16 }}>
             <div className="toggle-wrap" onClick={() => updateGlobal('trailingStop', !g.trailingStop)}>
               <div className={`toggle ${g.trailingStop ? 'on' : ''}`} />
@@ -127,20 +120,14 @@ export default function Rules() {
               Automatically move SL in profit direction as price moves
             </div>
           </div>
-
           {g.trailingStop && (
             <div className="field" style={{ maxWidth: 200 }}>
               <label>Trailing Distance (pips)</label>
-              <input
-                type="number"
-                value={g.trailingStopPips}
-                onChange={e => updateGlobal('trailingStopPips', parseFloat(e.target.value))}
-              />
+              <input type="number" value={g.trailingStopPips} onChange={e => updateGlobal('trailingStopPips', parseFloat(e.target.value))} />
             </div>
           )}
         </div>
 
-        {/* Advanced: Breakeven */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, marginBottom: 24 }}>
           <div style={{ marginBottom: 16 }}>
             <div className="toggle-wrap" onClick={() => updateGlobal('breakeven', !g.breakeven)}>
@@ -151,20 +138,15 @@ export default function Rules() {
               Move SL to entry price when trade is in profit by X pips
             </div>
           </div>
-
           {g.breakeven && (
             <div className="field" style={{ maxWidth: 200 }}>
               <label>Trigger at (pips profit)</label>
-              <input
-                type="number"
-                value={g.breakevenTriggerPips}
-                onChange={e => updateGlobal('breakevenTriggerPips', parseFloat(e.target.value))}
-              />
+              <input type="number" value={g.breakevenTriggerPips} onChange={e => updateGlobal('breakevenTriggerPips', parseFloat(e.target.value))} />
             </div>
           )}
         </div>
 
-        <button className="btn btn-primary" onClick={saveGlobal} disabled={saving}>
+        <button style={yellowBtn} onClick={saveGlobal} disabled={saving}>
           {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save Global Rules'}
         </button>
       </div>
@@ -184,67 +166,37 @@ export default function Rules() {
 
         {Object.entries(rules.symbols).map(([symbol, rule]) => (
           <div key={symbol} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            padding: '12px 16px',
-            background: 'var(--bg3)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            marginBottom: 8,
+            display: 'flex', alignItems: 'center', gap: 16,
+            padding: '12px 16px', background: 'var(--bg3)',
+            border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 8,
           }}>
             <div style={{ fontWeight: 600, minWidth: 80 }}>{symbol}</div>
             <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-              SL: {rule.stopLossPips ?? 'inherit'} pips ·
-              TP: {rule.takeProfitPips ?? 'inherit'} pips
+              SL: {rule.stopLossPips ?? 'inherit'} pips · TP: {rule.takeProfitPips ?? 'inherit'} pips
             </div>
-            <button
-              className="btn btn-danger"
-              onClick={() => removeSymbol(symbol)}
-              style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
-            >
+            <button className="btn btn-danger" onClick={() => removeSymbol(symbol)} style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}>
               Remove
             </button>
           </div>
         ))}
 
-        {/* Add Symbol */}
         <div style={{
-          marginTop: 16,
-          paddingTop: 16,
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          gap: 12,
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
+          marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)',
+          display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap',
         }}>
           <div className="field" style={{ minWidth: 120 }}>
             <label>Symbol</label>
-            <input
-              value={newSymbol}
-              onChange={e => setNewSymbol(e.target.value)}
-              placeholder="EURUSD"
-            />
+            <input value={newSymbol} onChange={e => setNewSymbol(e.target.value)} placeholder="EURUSD" />
           </div>
           <div className="field" style={{ minWidth: 120 }}>
             <label>SL (pips)</label>
-            <input
-              type="number"
-              value={newSymbolPips.stopLossPips}
-              onChange={e => setNewSymbolPips(p => ({ ...p, stopLossPips: +e.target.value }))}
-            />
+            <input type="number" value={newSymbolPips.stopLossPips} onChange={e => setNewSymbolPips(p => ({ ...p, stopLossPips: +e.target.value }))} />
           </div>
           <div className="field" style={{ minWidth: 120 }}>
             <label>TP (pips)</label>
-            <input
-              type="number"
-              value={newSymbolPips.takeProfitPips}
-              onChange={e => setNewSymbolPips(p => ({ ...p, takeProfitPips: +e.target.value }))}
-            />
+            <input type="number" value={newSymbolPips.takeProfitPips} onChange={e => setNewSymbolPips(p => ({ ...p, takeProfitPips: +e.target.value }))} />
           </div>
-          <button className="btn btn-primary" onClick={addSymbol} style={{ height: 38 }}>
-            + Add Symbol
-          </button>
+          <button style={{ ...yellowBtn, height: 38 }} onClick={addSymbol}>+ Add Symbol</button>
         </div>
       </div>
     </div>

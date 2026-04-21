@@ -19,7 +19,6 @@ export default function History() {
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(false);
 
-  // Load accounts on mount
   useEffect(() => {
     fetchAccounts().then(acc => {
       setAccounts(acc);
@@ -27,7 +26,6 @@ export default function History() {
     });
   }, []);
 
-  // Load history when account or days changes
   useEffect(() => {
     if (!selectedAccount) return;
     setLoading(true);
@@ -52,9 +50,18 @@ export default function History() {
         {accounts.map(acc => (
           <button
             key={acc.key}
-            className={`btn ${selectedAccount === acc.key ? 'btn-primary' : ''}`}
             onClick={() => setSelectedAccount(acc.key)}
-            style={{ padding: '8px 16px' }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius)',
+              border: `1px solid ${selectedAccount === acc.key ? 'rgba(255,211,42,0.4)' : 'var(--border2)'}`,
+              background: selectedAccount === acc.key ? 'var(--yellow-dim)' : 'var(--panel2)',
+              color: selectedAccount === acc.key ? 'var(--yellow)' : 'var(--text2)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+            }}
           >
             <span className={`badge badge-${acc.platform}`} style={{ marginRight: 8 }}>
               {acc.platform}
@@ -69,9 +76,18 @@ export default function History() {
         {[1, 7, 14, 30].map(d => (
           <button
             key={d}
-            className={`btn ${days === d ? 'btn-primary' : ''}`}
             onClick={() => setDays(d)}
-            style={{ padding: '6px 14px', fontSize: 11 }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--radius)',
+              border: `1px solid ${days === d ? 'rgba(255,211,42,0.4)' : 'var(--border2)'}`,
+              background: days === d ? 'var(--yellow-dim)' : 'var(--panel2)',
+              color: days === d ? 'var(--yellow)' : 'var(--text2)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+            }}
           >
             {d === 1 ? 'Today' : `${d}D`}
           </button>
@@ -86,9 +102,7 @@ export default function History() {
 
       {/* History Table */}
       {loading ? (
-        <div style={{ color: 'var(--text3)', padding: 40, textAlign: 'center' }}>
-          Loading history...
-        </div>
+        <div style={{ color: 'var(--text3)', padding: 40, textAlign: 'center' }}>Loading history...</div>
       ) : history.length === 0 ? (
         <div className="empty">
           <div className="empty-icon">◷</div>

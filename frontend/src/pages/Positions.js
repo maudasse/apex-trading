@@ -55,33 +55,34 @@ function EditModal({ position, onClose, onSaved }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
           <div className="field">
             <label>Stop Loss</label>
-            <input
-              type="number"
-              step="0.00001"
-              value={sl}
-              onChange={e => setSl(e.target.value)}
-              placeholder="e.g. 1.08000"
-            />
+            <input type="number" step="0.00001" value={sl} onChange={e => setSl(e.target.value)} placeholder="e.g. 1.08000" />
           </div>
           <div className="field">
             <label>Take Profit</label>
-            <input
-              type="number"
-              step="0.00001"
-              value={tp}
-              onChange={e => setTp(e.target.value)}
-              placeholder="e.g. 1.10000"
-            />
+            <input type="number" step="0.00001" value={tp} onChange={e => setTp(e.target.value)} placeholder="e.g. 1.10000" />
           </div>
         </div>
 
-        {error && (
-          <div style={{ color: 'var(--red)', fontSize: 11, marginBottom: 16 }}>{error}</div>
-        )}
+        {error && <div style={{ color: 'var(--red)', fontSize: 11, marginBottom: 16 }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn btn-primary" onClick={save} disabled={saving} style={{ flex: 1 }}>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              flex: 1,
+              padding: '8px 16px',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--yellow)',
+              background: 'var(--yellow)',
+              color: '#080c10',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -92,7 +93,6 @@ function EditModal({ position, onClose, onSaved }) {
 
 export default function Positions({ positions }) {
   const [editingPosition, setEditingPosition] = useState(null);
-
   const [filter, setFilter] = useState('all');
 
   const filtered = positions.filter(p => {
@@ -115,9 +115,18 @@ export default function Positions({ positions }) {
         {['all', 'mt4', 'mt5', 'buy', 'sell'].map(f => (
           <button
             key={f}
-            className={`btn ${filter === f ? 'btn-primary' : ''}`}
             onClick={() => setFilter(f)}
-            style={{ padding: '6px 14px', fontSize: 11 }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--radius)',
+              border: `1px solid ${filter === f ? 'rgba(255,211,42,0.4)' : 'var(--border2)'}`,
+              background: filter === f ? 'var(--yellow-dim)' : 'var(--panel2)',
+              color: filter === f ? 'var(--yellow)' : 'var(--text2)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+            }}
           >
             {f.toUpperCase()}
           </button>
@@ -175,7 +184,7 @@ export default function Positions({ positions }) {
                     <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>
                       {p.stopLoss || <span style={{ color: 'var(--text3)' }}>Not set</span>}
                     </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--yellow)' }}>
                       {p.takeProfit || <span style={{ color: 'var(--text3)' }}>Not set</span>}
                     </td>
                     <td style={{ color: 'var(--text3)' }}>{p.swap?.toFixed(2) ?? '0.00'}</td>
@@ -183,8 +192,7 @@ export default function Positions({ positions }) {
                       {p.profit >= 0 ? '+' : ''}${p.profit?.toFixed(2)}
                     </td>
                     <td>
-                      <button className="btn" onClick={() => setEditingPosition(p)}
-                        style={{ padding: '4px 10px', fontSize: 11 }}>
+                      <button className="btn" onClick={() => setEditingPosition(p)} style={{ padding: '4px 10px', fontSize: 11 }}>
                         Edit
                       </button>
                     </td>
