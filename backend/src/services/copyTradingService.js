@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const metaApiService = require('./metaApiService');
-const botService = require('./botService');
 
 const CONFIG_FILE = path.join(__dirname, '../../data/copyConfig.json');
 const DEFAULT_CONFIG = { enabled: false, masterAccountKey: null, followers: [], copySlTp: true };
@@ -89,6 +88,9 @@ class CopyTradingService {
     // Key format: "followerAccountKey:masterPositionId"
     this.pendingCopies = new Set();
     this.stats = { totalCopied: 0, totalClosed: 0, errors: [], lastRun: null };
+    // Debounce: prevent tick() from firing more than once per 2 seconds
+    this._tickDebounceHandle = null;
+    this._tickInProgress = false;
   }
 
   start() {
@@ -104,30 +106,24 @@ class CopyTradingService {
     console.log(`[CopyTrading] Started (streaming) — Master: ${config.masterAccountKey} → Followers: ${followerKeys}`);
 
     // React to master position updates via streaming — no polling needed
-    // Chain with existing hooks (botService may already have set onPositionUpdate)
     const self = this;
-    const prevPositionUpdate = metaApiService.onPositionUpdate;
-    const prevPositionClosed = metaApiService.onPositionClosed;
-
     metaApiService.onPositionUpdate = (accountKey, positions) => {
-      if (prevPositionUpdate) prevPositionUpdate(accountKey, positions);
       const cfg = loadConfig();
       if (!cfg.enabled) return;
       if (accountKey === cfg.masterAccountKey) {
-        self.tick();
+        self.debouncedTick();
       }
     };
     metaApiService.onPositionClosed = (accountKey, positionId) => {
-      if (prevPositionClosed) prevPositionClosed(accountKey, positionId);
       const cfg = loadConfig();
       if (!cfg.enabled) return;
       if (accountKey === cfg.masterAccountKey) {
-        self.tick();
+        self.debouncedTick();
       }
     };
 
     // Run once on start to sync current state
-    this.tick();
+    this.debouncedTick();
   }
 
   stop() {
@@ -142,6 +138,19 @@ class CopyTradingService {
   restart() {
     this.stop();
     setTimeout(() => this.start(), 500);
+  }
+
+
+  debouncedTick() {
+    // Cancel any pending tick — we only want to run once the stream settles
+    if (this._tickDebounceHandle) clearTimeout(this._tickDebounceHandle);
+    // If a tick is already running, schedule one more after it finishes
+    if (this._tickInProgress) return;
+    this._tickDebounceHandle = setTimeout(() => {
+      this._tickDebounceHandle = null;
+      this._tickInProgress = true;
+      this.tick().finally(() => { this._tickInProgress = false; });
+    }, 500); // wait 500ms for the stream to settle before acting
   }
 
   async tick() {
@@ -287,26 +296,6 @@ class CopyTradingService {
       );
 
       this.stats.totalCopied++;
-
-      // Trigger SL/TP bot on the new follower position after a short delay
-      // (give broker 3s to confirm the position before we try to modify it)
-      setTimeout(async () => {
-        try {
-          const followerPositions = metaApiService.getPositionsFromCache(follower.accountKey);
-          const rules = require("./rulesStore").getRules();
-          if (rules.global.enabled) {
-            for (const pos of followerPositions) {
-              const m = pos.comment?.match(/^Copy of (\S+)/);
-              if (m && m[1] === masterPosition.id) {
-                await botService.processPosition(pos, rules);
-                break;
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[CopyTrading] Could not apply SL/TP to copied position:", e.message);
-        }
-      }, 3000);
 
       if (global.broadcast) {
         global.broadcast({
