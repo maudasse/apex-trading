@@ -14,8 +14,8 @@
   --accent-glow: rgba(0, 212, 170, 0.3);
   --red: #ff4757;
   --red-dim: rgba(255, 71, 87, 0.12);
-  --green: #00d4aa;
-  --green-dim: rgba(0, 212, 170, 0.12);
+  --green: #ffd32a;
+  --green-dim: rgba(255, 211, 42, 0.12);
   --yellow: #ffd32a;
   --yellow-dim: rgba(255, 211, 42, 0.12);
   --text: #e0eaf4;
@@ -64,7 +64,7 @@ body {
   position: absolute;
   top: 0; right: 0;
   width: 1px; height: 100%;
-  background: linear-gradient(to bottom, transparent, var(--accent-glow) 50%, transparent);
+  background: linear-gradient(to bottom, transparent, rgba(255,211,42,0.3) 50%, transparent);
 }
 
 .sidebar-logo {
@@ -79,7 +79,7 @@ body {
 .logo-mark {
   display: flex;
   align-items: center;
-  filter: drop-shadow(0 0 6px var(--accent-glow));
+  filter: drop-shadow(0 0 6px rgba(255,211,42,0.3));
   flex-shrink: 0;
 }
 
@@ -115,7 +115,7 @@ body {
   text-transform: uppercase;
 }
 
-.ws-badge[data-connected="true"] { color: var(--accent); border-color: var(--accent-dim); }
+.ws-badge[data-connected="true"] { color: var(--yellow); border-color: var(--yellow-dim); }
 
 .ws-dot {
   width: 6px; height: 6px;
@@ -125,8 +125,8 @@ body {
 }
 
 .ws-badge[data-connected="true"] .ws-dot {
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
+  background: var(--yellow);
+  box-shadow: 0 0 6px var(--yellow);
   animation: pulse 2s infinite;
 }
 
@@ -256,9 +256,9 @@ body {
   line-height: 1;
 }
 
-.stat-value.green { color: var(--green); }
+.stat-value.green { color: var(--yellow); }
 .stat-value.red { color: var(--red); }
-.stat-value.accent { color: var(--accent2); }
+.stat-value.accent { color: var(--yellow); }
 
 .stat-sub {
   font-size: 10px;
@@ -308,7 +308,7 @@ tr:hover td { background: var(--bg3); }
   text-transform: uppercase;
 }
 
-.badge-buy { background: var(--green-dim); color: var(--green); }
+.badge-buy { background: var(--yellow-dim); color: var(--yellow); }
 .badge-sell { background: var(--red-dim); color: var(--red); }
 .badge-mt4 { background: var(--yellow-dim); color: var(--yellow); }
 .badge-mt5 { background: var(--accent-dim); color: var(--accent2); }
@@ -327,7 +327,7 @@ tr:hover td { background: var(--bg3); }
   letter-spacing: 0.03em;
 }
 
-.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn:hover { border-color: var(--yellow); color: var(--yellow); }
 
 .btn-primary {
   background: var(--accent);
@@ -362,7 +362,7 @@ tr:hover td { background: var(--bg3); }
   transition: border-color var(--transition);
 }
 
-.field input:focus, .field select:focus { border-color: var(--accent); }
+.field input:focus, .field select:focus { border-color: var(--yellow); }
 .field select option { background: var(--bg3); }
 
 /* Toggle switch */
@@ -382,7 +382,7 @@ tr:hover td { background: var(--bg3); }
   flex-shrink: 0;
 }
 
-.toggle.on { background: var(--accent); }
+.toggle.on { background: var(--yellow); }
 
 .toggle::after {
   content: '';
@@ -400,7 +400,7 @@ tr:hover td { background: var(--bg3); }
 .toggle-label { font-size: 12px; color: var(--text2); user-select: none; }
 
 /* Profit/Loss coloring */
-.profit { color: var(--green); }
+.profit { color: var(--yellow); }
 .loss { color: var(--red); }
 
 /* Notifications */
@@ -427,8 +427,8 @@ tr:hover td { background: var(--bg3); }
   max-width: 340px;
 }
 
-.notification--success { border-color: rgba(0,212,170,0.4); }
-.notif-icon { color: var(--accent); }
+.notification--success { border-color: rgba(255,211,42,0.4); }
+.notif-icon { color: var(--yellow); }
 
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }

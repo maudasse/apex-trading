@@ -37,7 +37,7 @@ function AccountCard({ accountKey, platform, label }) {
       .catch(e => setError(e.message));
   }, [accountKey]);
 
-  const borderColor = platform === 'mt4' ? 'var(--yellow)' : 'var(--accent2)';
+  const borderColor = 'var(--yellow)';
 
   if (error) return (
     <div className="stat-card" style={{ borderLeft: `3px solid ${borderColor}` }}>
@@ -56,7 +56,7 @@ function AccountCard({ accountKey, platform, label }) {
     </div>
   );
 
-  const pnlColor = (info.profit || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+  const pnlColor = (info.profit || 0) >= 0 ? 'var(--yellow)' : 'var(--red)';
 
   return (
     <div className="stat-card" style={{ borderLeft: `3px solid ${borderColor}` }}>
@@ -64,7 +64,7 @@ function AccountCard({ accountKey, platform, label }) {
         <span>{label}</span>
         <span className={`badge badge-${platform}`}>{platform}</span>
       </div>
-      <div className="stat-value" style={{ fontSize: 22, marginBottom: 8 }}>
+      <div className="stat-value" style={{ fontSize: 22, marginBottom: 8, color: '#ffffff' }}>
         ${info.balance?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </div>
       <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--text3)', flexWrap: 'wrap' }}>
@@ -195,7 +195,7 @@ export default function Dashboard({ positions }) {
             className="btn"
             onClick={handleRestart}
             disabled={restarting}
-            style={{ fontSize: 12, borderColor: 'var(--accent2)', color: 'var(--accent2)' }}
+            style={{ fontSize: 12, borderColor: 'var(--yellow)', color: 'var(--yellow)' }}
           >
             {restarting ? 'Restarting...' : '↺ Restart Bots'}
           </button>
@@ -217,9 +217,9 @@ export default function Dashboard({ positions }) {
           borderRadius: 'var(--radius)',
           marginBottom: 20,
           fontSize: 12,
-          background: actionMsg.type === 'success' ? 'var(--green-dim)' : 'var(--red-dim)',
-          color: actionMsg.type === 'success' ? 'var(--green)' : 'var(--red)',
-          border: `1px solid ${actionMsg.type === 'success' ? 'rgba(0,212,170,0.3)' : 'rgba(255,71,87,0.3)'}`,
+          background: actionMsg.type === 'success' ? 'var(--yellow-dim)' : 'var(--red-dim)',
+          color: actionMsg.type === 'success' ? 'var(--yellow)' : 'var(--red)',
+          border: `1px solid ${actionMsg.type === 'success' ? 'rgba(255,211,42,0.3)' : 'rgba(255,71,87,0.3)'}`,
         }}>
           {actionMsg.text}
         </div>
@@ -252,7 +252,7 @@ export default function Dashboard({ positions }) {
         </div>
         <div className="stat-card">
           <div className="stat-label">Bot Status</div>
-          <div className="stat-value" style={{ fontSize: 18, color: botStats?.running ? 'var(--green)' : 'var(--text3)' }}>
+          <div className="stat-value" style={{ fontSize: 18, color: botStats?.running ? 'var(--yellow)' : 'var(--text3)' }}>
             {botStats?.running ? '● ACTIVE' : '○ STOPPED'}
           </div>
           <div className="stat-sub">{botStats?.totalModified ?? 0} modifications made</div>
@@ -317,7 +317,7 @@ export default function Dashboard({ positions }) {
                       <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--red)' }}>
                         {p.stopLoss || <span style={{ color: 'var(--text3)' }}>—</span>}
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--green)' }}>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--yellow)' }}>
                         {p.takeProfit || <span style={{ color: 'var(--text3)' }}>—</span>}
                       </td>
                       <td className={p.profit >= 0 ? 'profit' : 'loss'}>
