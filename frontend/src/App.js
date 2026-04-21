@@ -4,6 +4,7 @@ import Positions from './pages/Positions';
 import Rules from './pages/Rules';
 import History from './pages/History';
 import CopyTrading from './pages/CopyTrading';
+import NotificationPanel from './NotificationPanel';
 import { createWebSocket } from './services/api';
 import './App.css';
 
@@ -35,27 +36,17 @@ function MiniCrosshair({ active }) {
 function CrosshairLogo() {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer circle */}
       <circle cx="16" cy="16" r="13" stroke="var(--yellow)" strokeWidth="1.8"/>
-      {/* Inner circle */}
       <circle cx="16" cy="16" r="7" stroke="var(--yellow)" strokeWidth="1.5"/>
-      {/* Center ring — red */}
       <circle cx="16" cy="16" r="4" stroke="var(--red)" strokeWidth="1.2"/>
-      {/* Center dot — red */}
       <circle cx="16" cy="16" r="2" fill="var(--red)"/>
-      {/* Crosshair — top */}
       <line x1="16" y1="1" x2="16" y2="7" stroke="var(--yellow)" strokeWidth="1.8" strokeLinecap="round"/>
-      {/* Crosshair — bottom */}
       <line x1="16" y1="25" x2="16" y2="31" stroke="var(--yellow)" strokeWidth="1.8" strokeLinecap="round"/>
-      {/* Crosshair — left */}
       <line x1="1" y1="16" x2="7" y2="16" stroke="var(--yellow)" strokeWidth="1.8" strokeLinecap="round"/>
-      {/* Crosshair — right */}
       <line x1="25" y1="16" x2="31" y2="16" stroke="var(--yellow)" strokeWidth="1.8" strokeLinecap="round"/>
     </svg>
   );
 }
-
-
 
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -64,9 +55,16 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
 
   const addNotification = useCallback((msg, type = 'info') => {
-    const id = Date.now();
-    setNotifications(n => [...n, { id, msg, type }]);
-    setTimeout(() => setNotifications(n => n.filter(x => x.id !== id)), 4000);
+    const id = Date.now() + Math.random();
+    setNotifications(n => [...n, { id, msg, type, timestamp: Date.now() }]);
+  }, []);
+
+  const dismissNotification = useCallback((id) => {
+    setNotifications(n => n.filter(x => x.id !== id));
+  }, []);
+
+  const clearAllNotifications = useCallback(() => {
+    setNotifications([]);
   }, []);
 
   useEffect(() => {
@@ -90,12 +88,12 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard positions={positions} />;
-      case 'positions': return <Positions positions={positions} />;
-      case 'rules': return <Rules />;
+      case 'dashboard':   return <Dashboard positions={positions} />;
+      case 'positions':   return <Positions positions={positions} />;
+      case 'rules':       return <Rules />;
       case 'copytrading': return <CopyTrading />;
-      case 'history': return <History />;
-      default: return <Dashboard positions={positions} />;
+      case 'history':     return <History />;
+      default:            return <Dashboard positions={positions} />;
     }
   };
 
@@ -104,9 +102,7 @@ export default function App() {
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="sidebar-logo">
-          <span className="logo-mark">
-            <CrosshairLogo />
-          </span>
+          <span className="logo-mark"><CrosshairLogo /></span>
           <div>
             <div className="logo-title">MAUDE</div>
             <div className="logo-sub">Trading Automation</div>
@@ -145,17 +141,12 @@ export default function App() {
         </div>
       </main>
 
-      {/* Notifications */}
-      <div className="notifications">
-        {notifications.map(({ id, msg, type }) => (
-          <div key={id} className={`notification notification--${type}`}>
-            <span className="notif-icon">
-              {type === 'success' ? '✓' : type === 'copy' ? '⇄' : 'ℹ'}
-            </span>
-            {msg}
-          </div>
-        ))}
-      </div>
+      {/* Notification Panel — fixed right side, never overlaps content */}
+      <NotificationPanel
+        notifications={notifications}
+        onDismiss={dismissNotification}
+        onClearAll={clearAllNotifications}
+      />
     </div>
   );
 }
