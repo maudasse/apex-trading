@@ -666,4 +666,6 @@ tr:hover td { background: var(--bg3); }
 /* Mobile: shrink notification panel */
 @media (max-width: 768px) {
   .notif-panel { width: 130px; }
+  .notif-collapse-btn { right: 130px; }
+  .notif-panel--collapsed .notif-collapse-btn { right: 28px; }
 }
