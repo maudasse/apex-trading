@@ -629,10 +629,10 @@ tr:hover td { background: var(--bg3); }
 
 .notif-collapse-btn {
   position: absolute;
-  left: 0;
+  left: -20px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
+  width: 20px;
   height: 48px;
   background: var(--bg2);
   border: 1px solid var(--border);
