@@ -7,7 +7,7 @@ async function fetchAccounts() {
 }
 
 async function fetchHistory(accountKey, days) {
-  const res = await fetch(`/api/trades/history?days=${days}&account=${accountKey}`);
+  const res = await fetch(`https://apex-trading-production-43d0.up.railway.app/api/trades/history?days=${days}&account=${accountKey}`);
   const json = await res.json();
   return json.success ? json.data : [];
 }
