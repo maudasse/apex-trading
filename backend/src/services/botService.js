@@ -65,7 +65,8 @@ class BotService {
     if (failedPositions.has(position.id)) return;
 
     // Debounce: skip if a modification for this position is already in-flight (within 10s)
-    const lastFlight = inFlightPositions.get(position.id);
+    const flightKey = `${position.accountKey}:${position.id}`;
+    const lastFlight = inFlightPositions.get(flightKey);
     if (lastFlight && Date.now() - lastFlight < 10000) return;
 
     const rule = rulesStore.getRuleForSymbol(position.symbol);
@@ -166,7 +167,8 @@ class BotService {
 
   async applyModification(position, sl, tp) {
     // Mark in-flight to block duplicate modifications for 10 seconds
-    inFlightPositions.set(position.id, Date.now());
+    const flightKey = `${position.accountKey}:${position.id}`;
+    inFlightPositions.set(flightKey, Date.now());
     try {
       await metaApiService.modifyPosition(position.accountKey, position.id, sl, tp);
       this.stats.totalModified++;
@@ -191,7 +193,7 @@ class BotService {
         processedPositions.delete(position.id);
         console.warn(`[Bot] Position ${position.id} not found on broker — removing from tracking`);
       } else {
-        inFlightPositions.delete(position.id); // allow retry on non-fatal errors
+        inFlightPositions.delete(`${position.accountKey}:${position.id}`); // allow retry on non-fatal errors
         console.error(`[Bot] Failed to modify ${position.id}:`, msg);
         this.stats.errors.push({ time: new Date().toISOString(), message: msg });
         if (this.stats.errors.length > 50) this.stats.errors.shift();
