@@ -343,7 +343,10 @@ class CopyTradingService {
     const config = loadConfig();
     const newConfig = { ...config, ...updates };
     await saveConfig(newConfig);
-    if (updates.enabled !== undefined || updates.masterAccountKey || updates.followers) {
+    // Only restart if master account or enabled status changed — not for lotSize/symbolMap tweaks
+    const masterChanged = updates.masterAccountKey && updates.masterAccountKey !== config.masterAccountKey;
+    const enabledChanged = updates.enabled !== undefined && updates.enabled !== config.enabled;
+    if (masterChanged || enabledChanged) {
       this.restart();
     }
     return newConfig;
