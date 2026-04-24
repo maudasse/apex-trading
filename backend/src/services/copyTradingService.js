@@ -102,8 +102,8 @@ class CopyTradingService {
     this.running = false;
     if (this.intervalHandle) clearInterval(this.intervalHandle);
     this.pendingCopies.clear();
-    metaApiService.onPositionUpdate = null;
-    metaApiService.onPositionClosed = null;
+    metaApiService.onPositionUpdate = prevPositionUpdate || null;
+    metaApiService.onPositionClosed = prevPositionClosed || null;
     console.log('[CopyTrading] Stopped');
   }
 
