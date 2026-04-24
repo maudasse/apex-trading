@@ -8,7 +8,17 @@ export default function Rules() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newSymbolPips, setNewSymbolPips] = useState({ stopLossPips: 50, takeProfitPips: 100 });
 
-  const load = () => getRules().then(setRules).catch(console.error);
+  const load = () => getRules().then(data => {
+    // Ensure numeric fields are never null/undefined (Railway may return stale defaults)
+    if (data?.global) {
+      data.global.stopLossPips    = data.global.stopLossPips    ?? 6;
+      data.global.takeProfitPips  = data.global.takeProfitPips  ?? 5;
+      data.global.riskRewardRatio = data.global.riskRewardRatio ?? 2;
+      data.global.trailingStopPips    = data.global.trailingStopPips    ?? 30;
+      data.global.breakevenTriggerPips = data.global.breakevenTriggerPips ?? 20;
+    }
+    setRules(data);
+  }).catch(console.error);
   useEffect(() => { load(); }, []);
 
   const saveGlobal = async () => {

@@ -53,6 +53,7 @@ export default function App() {
   const [positions, setPositions] = useState([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   const addNotification = useCallback((msg, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -146,6 +147,8 @@ export default function App() {
         notifications={notifications}
         onDismiss={dismissNotification}
         onClearAll={clearAllNotifications}
+        collapsed={panelCollapsed}
+        onToggleCollapse={() => setPanelCollapsed(c => !c)}
       />
     </div>
   );

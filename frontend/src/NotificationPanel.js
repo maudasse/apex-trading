@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 const TYPE_CONFIG = {
   success: { icon: '✓', label: 'SL/TP SET', color: 'var(--yellow)', dim: 'var(--yellow-dim)' },
@@ -27,9 +27,8 @@ function NotifItem({ notif, onDismiss }) {
   );
 }
 
-export default function NotificationPanel({ notifications, onDismiss, onClearAll }) {
+export default function NotificationPanel({ notifications, onDismiss, onClearAll, collapsed, onToggleCollapse }) {
   const bottomRef = useRef(null);
-  const [collapsed, setCollapsed] = useState(false);
 
   // Auto-scroll to latest
   useEffect(() => {
@@ -39,7 +38,7 @@ export default function NotificationPanel({ notifications, onDismiss, onClearAll
   return (
     <aside className={`notif-panel${collapsed ? ' notif-panel--collapsed' : ''}`}>
       {/* Collapse toggle button */}
-      <button className="notif-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
+      <button className="notif-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expand' : 'Collapse'}>
         {collapsed ? '‹' : '›'}
         {collapsed && notifications.length > 0 && (
           <span className="notif-collapse-badge">{notifications.length}</span>
