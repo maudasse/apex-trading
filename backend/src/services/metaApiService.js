@@ -94,6 +94,38 @@ class MetaApiService {
         async onAccountInformationUpdated(instanceIndex, info) {
           self.accountInfoCache[key] = { ...info, accountKey: key, platform, label };
         }
+
+        async onSymbolPriceUpdated(instanceIndex, price) {
+          // Fired on every tick — update currentPrice + profit for matching positions
+          if (!self.positionsCache[key]) return;
+          let updated = false;
+          for (const [posId, pos] of self.positionsCache[key]) {
+            if (pos.symbol !== price.symbol) continue;
+            const isBuy = pos.type === 'POSITION_TYPE_BUY';
+            const currentPrice = isBuy ? price.bid : price.ask;
+            const pipSize = self._getPipSize(pos.symbol);
+            const digits = self._getDigits(pos.symbol);
+            const priceDiff = isBuy ? currentPrice - pos.openPrice : pos.openPrice - currentPrice;
+            // Rough P&L: priceDiff * volume * contractSize (100000 for forex, 1 for indices)
+            const contractSize = self._getContractSize(pos.symbol);
+            const profit = parseFloat((priceDiff * pos.volume * contractSize).toFixed(2));
+            self.positionsCache[key].set(posId, {
+              ...pos,
+              currentPrice,
+              profit,
+            });
+            updated = true;
+          }
+          if (updated && global.broadcast) {
+            // Throttle: only broadcast max once per 500ms per account
+            const now = Date.now();
+            if (!self._lastBroadcast) self._lastBroadcast = {};
+            if (!self._lastBroadcast[key] || now - self._lastBroadcast[key] > 500) {
+              self._lastBroadcast[key] = now;
+              global.broadcast({ type: 'POSITIONS_UPDATE', data: self.getAllPositionsFromCache() });
+            }
+          }
+        }
       }
       const listener = new PositionListener();
 
@@ -200,6 +232,31 @@ class MetaApiService {
     const raw = await conn.getDealsByTimeRange(startTime, new Date());
     const history = Array.isArray(raw) ? raw : (raw?.deals || []);
     return history.map(d => ({ ...d, accountKey, platform: meta.platform, accountLabel: meta.label }));
+  }
+
+  // ── Price helpers (used by tick listener) ───────────────────────
+  _getPipSize(symbol) {
+    const sym = symbol.toUpperCase();
+    if (['US500','SPX','US30','DOW','NAS100','NDX','UK100','GER40'].some(i => sym.includes(i))) return 1;
+    if (sym.includes('XAU') || sym.includes('XAG')) return 0.1;
+    if (sym.includes('JPY')) return 0.01;
+    return 0.0001;
+  }
+
+  _getDigits(symbol) {
+    const sym = symbol.toUpperCase();
+    if (['US500','SPX','US30','DOW','NAS100','NDX','UK100','GER40'].some(i => sym.includes(i))) return 2;
+    if (sym.includes('XAU') || sym.includes('XAG')) return 2;
+    if (sym.includes('JPY')) return 3;
+    return 5;
+  }
+
+  _getContractSize(symbol) {
+    const sym = symbol.toUpperCase();
+    // Indices & metals: contract size is typically 1 (broker-dependent, adjust if needed)
+    if (['US500','SPX','US30','DOW','NAS100','NDX','UK100','GER40','XAU','XAG'].some(i => sym.includes(i))) return 1;
+    // Forex: standard lot = 100,000
+    return 100000;
   }
 
   async getAllHistory(daysBack = 7) {
