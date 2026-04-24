@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 const TYPE_CONFIG = {
   success: { icon: '✓', label: 'SL/TP SET', color: 'var(--yellow)', dim: 'var(--yellow-dim)' },
@@ -29,6 +29,7 @@ function NotifItem({ notif, onDismiss }) {
 
 export default function NotificationPanel({ notifications, onDismiss, onClearAll }) {
   const bottomRef = useRef(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   // Auto-scroll to latest
   useEffect(() => {
@@ -36,39 +37,51 @@ export default function NotificationPanel({ notifications, onDismiss, onClearAll
   }, [notifications.length]);
 
   return (
-    <aside className="notif-panel">
-      <div className="notif-panel-header">
-        <div className="notif-panel-title">
-          <span className="notif-panel-dot" />
-          Activity
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="notif-count">{notifications.length}</span>
-          {notifications.length > 0 && (
-            <button className="notif-clear-btn" onClick={onClearAll}>Clear</button>
-          )}
-        </div>
-      </div>
-
-      <div className="notif-panel-body">
-        {notifications.length === 0 ? (
-          <div className="notif-empty">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style={{ opacity: 0.3, marginBottom: 8 }}>
-              <circle cx="16" cy="16" r="13" stroke="var(--yellow)" strokeWidth="1.8"/>
-              <circle cx="16" cy="16" r="7" stroke="var(--yellow)" strokeWidth="1.5"/>
-              <circle cx="16" cy="16" r="2" fill="var(--yellow)" opacity="0.5"/>
-            </svg>
-            <div>Waiting for events...</div>
-          </div>
-        ) : (
-          <>
-            {notifications.map(n => (
-              <NotifItem key={n.id} notif={n} onDismiss={onDismiss} />
-            ))}
-            <div ref={bottomRef} />
-          </>
+    <aside className={`notif-panel${collapsed ? ' notif-panel--collapsed' : ''}`}>
+      {/* Collapse toggle button */}
+      <button className="notif-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
+        {collapsed ? '‹' : '›'}
+        {collapsed && notifications.length > 0 && (
+          <span className="notif-collapse-badge">{notifications.length}</span>
         )}
-      </div>
+      </button>
+
+      {!collapsed && (
+        <>
+          <div className="notif-panel-header">
+            <div className="notif-panel-title">
+              <span className="notif-panel-dot" />
+              Activity
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="notif-count">{notifications.length}</span>
+              {notifications.length > 0 && (
+                <button className="notif-clear-btn" onClick={onClearAll}>Clear</button>
+              )}
+            </div>
+          </div>
+
+          <div className="notif-panel-body">
+            {notifications.length === 0 ? (
+              <div className="notif-empty">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style={{ opacity: 0.3, marginBottom: 8 }}>
+                  <circle cx="16" cy="16" r="13" stroke="var(--yellow)" strokeWidth="1.8"/>
+                  <circle cx="16" cy="16" r="7" stroke="var(--yellow)" strokeWidth="1.5"/>
+                  <circle cx="16" cy="16" r="2" fill="var(--yellow)" opacity="0.5"/>
+                </svg>
+                <div>Waiting for events...</div>
+              </div>
+            ) : (
+              <>
+                {notifications.map(n => (
+                  <NotifItem key={n.id} notif={n} onDismiss={onDismiss} />
+                ))}
+                <div ref={bottomRef} />
+              </>
+            )}
+          </div>
+        </>
+      )}
     </aside>
   );
 }

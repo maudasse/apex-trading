@@ -620,3 +620,48 @@ tr:hover td { background: var(--bg3); }
     width: 130px;
   }
 }
+
+/* ── Collapsible notification panel ──────────────────────────────── */
+.notif-panel--collapsed {
+  width: 28px;
+  min-width: 28px;
+}
+
+.notif-collapse-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 48px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--text2);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: color var(--transition), background var(--transition);
+  z-index: 10;
+}
+
+.notif-collapse-btn:hover { color: var(--yellow); background: var(--bg3); }
+
+.notif-collapse-badge {
+  font-size: 8px;
+  background: var(--yellow);
+  color: var(--bg);
+  border-radius: 8px;
+  padding: 1px 4px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Keep panel relative so toggle button positions correctly */
+.notif-panel { position: relative; }
