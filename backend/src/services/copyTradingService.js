@@ -42,43 +42,9 @@ function saveConfigToFile(config) {
 }
 
 async function saveConfig(config) {
-  // Always save to file
+  // Save to file only — Railway API call removed to prevent triggering redeployments
   saveConfigToFile(config);
-
-  // Also persist to Railway env variable via Railway API so it survives restarts
-  try {
-    const projectId = process.env.RAILWAY_PROJECT_ID;
-    const serviceId = process.env.RAILWAY_SERVICE_ID;
-    const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
-    const apiToken = process.env.RAILWAY_API_TOKEN;
-
-    if (projectId && serviceId && environmentId && apiToken) {
-      const configStr = JSON.stringify(config);
-      const query = `
-        mutation {
-          variableUpsert(input: {
-            projectId: "${projectId}",
-            serviceId: "${serviceId}",
-            environmentId: "${environmentId}",
-            name: "COPY_TRADING_CONFIG",
-            value: ${JSON.stringify(configStr)}
-          })
-        }
-      `;
-      await fetch('https://backboard.railway.app/graphql/v2', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`,
-        },
-        body: JSON.stringify({ query }),
-      });
-      console.log('[CopyTrading] Config saved to Railway env variable');
-    }
-  } catch (e) {
-    // Non-fatal — file is still saved, just won't survive a full restart
-    console.warn('[CopyTrading] Could not save to Railway env variable:', e.message);
-  }
+  console.log('[CopyTrading] Config saved to file');
 }
 
 class CopyTradingService {
