@@ -610,21 +610,16 @@ tr:hover td { background: var(--bg3); }
 .notifications { display: none; }
 .notification  { display: none; }
 
-/* Align notification panel top with account cards */
-.notif-panel { margin-top: 80px; height: calc(100vh - 80px); }
-
-
-/* Mobile: shrink notification panel */
-@media (max-width: 768px) {
-  .notif-panel {
-    width: 130px;
-  }
+/* ── Notification panel positioning & collapse ───────────────────── */
+.notif-panel {
+  position: relative !important;
+  margin-top: 80px;
+  height: calc(100vh - 80px);
 }
 
-/* ── Collapsible notification panel ──────────────────────────────── */
 .notif-panel--collapsed {
-  width: 28px;
-  min-width: 28px;
+  width: 28px !important;
+  min-width: 28px !important;
 }
 
 .notif-collapse-btn {
@@ -663,5 +658,7 @@ tr:hover td { background: var(--bg3); }
   line-height: 1.4;
 }
 
-/* Keep panel relative so toggle button positions correctly */
-.notif-panel { position: relative; }
+/* Mobile: shrink notification panel */
+@media (max-width: 768px) {
+  .notif-panel { width: 130px; }
+}
