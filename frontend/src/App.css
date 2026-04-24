@@ -613,3 +613,10 @@ tr:hover td { background: var(--bg3); }
 /* Align notification panel top with account cards */
 .notif-panel { margin-top: 80px; height: calc(100vh - 80px); }
 
+
+/* Mobile: shrink notification panel */
+@media (max-width: 768px) {
+  .notif-panel {
+    width: 130px;
+  }
+}
