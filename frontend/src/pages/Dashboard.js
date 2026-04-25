@@ -262,7 +262,7 @@ export default function Dashboard({ positions }) {
           <div className="stat-value" style={{ fontSize: 13, color: 'var(--text2)', marginTop: 6 }}>
             {botStats?.lastRun ? new Date(botStats.lastRun).toLocaleTimeString() : '—'}
           </div>
-          <div className="stat-sub">Polls every 1 second</div>
+          <div className="stat-sub">Streaming live</div>
         </div>
       </div>
 
