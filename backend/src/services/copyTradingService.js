@@ -122,7 +122,7 @@ class CopyTradingService {
       this._tickDebounceHandle = null;
       this._tickInProgress = true;
       this.tick().finally(() => { this._tickInProgress = false; });
-    }, 500); // wait 500ms for the stream to settle before acting
+    }, 100); // wait 100ms for the stream to settle before acting
   }
 
   async tick() {
@@ -269,26 +269,7 @@ class CopyTradingService {
 
       this.stats.totalCopied++;
 
-      // Trigger SL/TP bot on the new follower position after broker confirms it (3s delay)
-      const capturedMasterPositionId = masterPosition.id;
-      const capturedFollowerAccountKey = follower.accountKey;
-      setTimeout(async () => {
-        try {
-          const followerPositions = metaApiService.getPositionsFromCache(capturedFollowerAccountKey);
-          const rules = require('./rulesStore').getRules();
-          if (rules.global.enabled) {
-            for (const pos of followerPositions) {
-              const m = pos.comment?.match(/^Copy of (\S+)/);
-              if (m && m[1] === capturedMasterPositionId) {
-                await botService.processPosition(pos, rules);
-                break;
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('[CopyTrading] Could not apply SL/TP to copied position:', e.message);
-        }
-      }, 3000);
+      // SL/TP is applied instantly via onPositionAdded streaming event in botService — no delay needed
 
       if (global.broadcast) {
         global.broadcast({
