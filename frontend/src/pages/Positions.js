@@ -183,7 +183,6 @@ export default function Positions({ positions }) {
           <table>
             <thead>
               <tr>
-                <th>Entry Time</th>
                 <th>Duration</th>
                 <th>Symbol</th>
                 <th>Platform</th>
@@ -203,9 +202,6 @@ export default function Positions({ positions }) {
                 const isBuy = p.type === 'POSITION_TYPE_BUY';
                 return (
                   <tr key={`${p.platform}-${p.id}`}>
-                    <td style={{ fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                      {p.openTime ? new Date(p.openTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                    </td>
                     <td><Timer openTime={p.openTime} /></td>
                     <td style={{ fontWeight: 600 }}>{p.symbol}</td>
                     <td><span className={`badge badge-${p.platform}`}>{p.platform}</span></td>
