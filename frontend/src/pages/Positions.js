@@ -1,5 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { modifyPosition } from '../services/api';
+
+
+function Timer({ openTime }) {
+  const [elapsed, setElapsed] = useState('');
+
+  useEffect(() => {
+    const calc = () => {
+      if (!openTime) return setElapsed('—');
+      const diff = Math.floor((Date.now() - new Date(openTime).getTime()) / 1000);
+      if (diff < 0) return setElapsed('—');
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      setElapsed(
+        h > 0
+          ? `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`
+          : `${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`
+      );
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [openTime]);
+
+  return <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--yellow)', fontSize: 11 }}>{elapsed}</span>;
+}
 
 function EditModal({ position, onClose, onSaved }) {
   const [sl, setSl] = useState(position.stopLoss || '');
@@ -157,6 +183,8 @@ export default function Positions({ positions }) {
           <table>
             <thead>
               <tr>
+                <th>Entry Time</th>
+                <th>Duration</th>
                 <th>Symbol</th>
                 <th>Platform</th>
                 <th>Type</th>
@@ -175,6 +203,10 @@ export default function Positions({ positions }) {
                 const isBuy = p.type === 'POSITION_TYPE_BUY';
                 return (
                   <tr key={`${p.platform}-${p.id}`}>
+                    <td style={{ fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                      {p.openTime ? new Date(p.openTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </td>
+                    <td><Timer openTime={p.openTime} /></td>
                     <td style={{ fontWeight: 600 }}>{p.symbol}</td>
                     <td><span className={`badge badge-${p.platform}`}>{p.platform}</span></td>
                     <td><span className={`badge badge-${isBuy ? 'buy' : 'sell'}`}>{isBuy ? 'BUY' : 'SELL'}</span></td>
