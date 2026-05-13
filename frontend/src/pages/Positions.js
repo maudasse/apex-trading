@@ -202,7 +202,7 @@ export default function Positions({ positions }) {
                 const isBuy = p.type === 'POSITION_TYPE_BUY';
                 return (
                   <tr key={`${p.platform}-${p.id}`}>
-                    <td><Timer openTime={p.openTime} /></td>
+                    <td><Timer openTime={p.openTime || p.time} /></td>
                     <td style={{ fontWeight: 600 }}>{p.symbol}</td>
                     <td><span className={`badge badge-${p.platform}`}>{p.platform}</span></td>
                     <td><span className={`badge badge-${isBuy ? 'buy' : 'sell'}`}>{isBuy ? 'BUY' : 'SELL'}</span></td>
