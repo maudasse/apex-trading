@@ -39,16 +39,21 @@ export default function CopyTrading() {
   const [saved, setSaved] = useState(false);
   const [localConfig, setLocalConfig] = useState(null);
 
-  const load = async () => {
+  const load = async (overwriteLocal = false) => {
     const [ct, acc] = await Promise.all([fetchCopyTrading(), fetchAccounts()]);
     setData(ct);
     setAccounts(acc);
-    if (!localConfig) setLocalConfig(ct.config);
+    // Only overwrite localConfig on first load or after save — never during editing
+    setLocalConfig(prev => (prev === null || overwriteLocal) ? ct.config : prev);
   };
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 5000);
+    // Poll stats only — don't overwrite localConfig
+    const interval = setInterval(async () => {
+      const ct = await fetchCopyTrading();
+      setData(ct);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,7 +72,7 @@ export default function CopyTrading() {
       await updateConfig(cleanConfig);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      load();
+      load(true); // overwrite localConfig after save
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
@@ -319,7 +324,7 @@ export default function CopyTrading() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {Object.entries(follower.symbolMap || {}).map(([from, to], mapIndex) => (
-                      <div key={mapIndex} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div key={`sym-${index}-${mapIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <input
                           style={{ background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--radius)', color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: '4px 8px', width: 120 }}
                           value={from}
